@@ -1,0 +1,142 @@
+[
+  {
+    "version": "v0.9",
+    "createSurface": {
+      "surfaceId": "bridge-results-view",
+      "catalogId": "https://a2ui.org/specification/v0_9/basic_catalog.json"
+    }
+  },
+  {
+    "version": "v0.9",
+    "updateComponents": {
+      "surfaceId": "bridge-results-view",
+      "components": [
+        {
+          "id": "root",
+          "component": "Column",
+          "justify": "start",
+          "align": "stretch",
+          "children": [
+            "results-header",
+            "results-summary",
+            "map-frame",
+            "divider-1",
+            "bridge-1-header",
+            "bridge-1-sfn",
+            "bridge-1-route",
+            "bridge-1-location",
+            "bridge-1-feature",
+            "bridge-1-county",
+            "bridge-1-coordinates",
+            "divider-2",
+            "bridge-2-header",
+            "bridge-2-sfn",
+            "bridge-2-route",
+            "bridge-2-location",
+            "bridge-2-feature",
+            "bridge-2-county",
+            "bridge-2-coordinates"
+          ]
+        },
+        {
+          "id": "results-header",
+          "component": "Text",
+          "variant": "h2",
+          "text": "Bridge Search Results"
+        },
+        {
+          "id": "results-summary",
+          "component": "Text",
+          "text": "Found 2 matching bridges."
+        },
+        {
+          "id": "map-frame",
+          "component": "WebFrameUrl",
+          "url": "/maps/embed?mode=directions&origin=38.9351%2C-83.4596&destination=38.9451%2C-83.4696"
+        },
+        {
+          "id": "divider-1",
+          "component": "Divider",
+          "axis": "horizontal"
+        },
+        {
+          "id": "bridge-1-header",
+          "component": "Text",
+          "variant": "h3",
+          "text": "Bridge 1"
+        },
+        {
+          "id": "bridge-1-sfn",
+          "component": "Text",
+          "text": "Structure ID (SFN): 0123456"
+        },
+        {
+          "id": "bridge-1-route",
+          "component": "Text",
+          "text": "Route code: SR-001"
+        },
+        {
+          "id": "bridge-1-location",
+          "component": "Text",
+          "text": "Location: Example bridge location"
+        },
+        {
+          "id": "bridge-1-feature",
+          "component": "Text",
+          "text": "Feature crossed: Example Creek"
+        },
+        {
+          "id": "bridge-1-county",
+          "component": "Text",
+          "text": "County code: 001"
+        },
+        {
+          "id": "bridge-1-coordinates",
+          "component": "Text",
+          "text": "Coordinates: 38.9351, -83.4596"
+        },
+        {
+          "id": "divider-2",
+          "component": "Divider",
+          "axis": "horizontal"
+        },
+        {
+          "id": "bridge-2-header",
+          "component": "Text",
+          "variant": "h3",
+          "text": "Bridge 2"
+        },
+        {
+          "id": "bridge-2-sfn",
+          "component": "Text",
+          "text": "Structure ID (SFN): 0123457"
+        },
+        {
+          "id": "bridge-2-route",
+          "component": "Text",
+          "text": "Route code: SR-002"
+        },
+        {
+          "id": "bridge-2-location",
+          "component": "Text",
+          "text": "Location: Second example bridge location"
+        },
+        {
+          "id": "bridge-2-feature",
+          "component": "Text",
+          "text": "Feature crossed: Second Example Creek"
+        },
+        {
+          "id": "bridge-2-county",
+          "component": "Text",
+          "text": "County code: 001"
+        },
+        {
+          "id": "bridge-2-coordinates",
+          "component": "Text",
+          "text": "Coordinates: 38.9451, -83.4696"
+        }
+      ]
+    }
+  }
+]
