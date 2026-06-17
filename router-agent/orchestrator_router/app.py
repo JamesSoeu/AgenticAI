@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from urllib.parse import urljoin
 
+import asyncio
 import httpx
 from starlette.applications import Starlette
 from starlette.requests import Request
@@ -9,8 +10,9 @@ from starlette.responses import JSONResponse, Response
 from starlette.routing import Route
 
 from orchestrator_router.card import build_agent_card
+from orchestrator_router.classifier import classify_route
 from orchestrator_router.config import RouterSettings, load_settings
-from orchestrator_router.routing import extract_text, route_request
+from orchestrator_router.routing import extract_text
 
 
 settings = load_settings()
@@ -24,6 +26,9 @@ async def healthz(_request: Request) -> JSONResponse:
             "data_agent_configured": bool(settings.data_agent_url),
             "map_agent_configured": bool(settings.map_agent_url),
             "default_agent": settings.default_agent,
+            "classifier_model": settings.router_model,
+            "classifier_location": settings.google_cloud_location,
+            "classifier_min_confidence": settings.classifier_min_confidence,
         }
     )
 
@@ -36,8 +41,8 @@ async def route_a2a(request: Request) -> Response:
     try:
         payload = await request.json()
         user_text = extract_text(payload)
-        route = route_request(user_text, settings.default_agent)
-        target_base = _target_url(route, settings)
+        decision = await asyncio.to_thread(classify_route, user_text, settings)
+        target_base = _target_url(decision.route, settings)
         target_url = urljoin(f"{target_base}/", "")
         headers = _forward_headers(request, target_base)
 
@@ -49,8 +54,11 @@ async def route_a2a(request: Request) -> Response:
             status_code=response.status_code,
             media_type=response.headers.get("content-type", "application/json"),
             headers={
-                "x-router-selected-agent": route,
+                "x-router-selected-agent": decision.route,
                 "x-router-target-url": target_base,
+                "x-router-decision-source": decision.source,
+                "x-router-confidence": f"{decision.confidence:.2f}",
+                "x-router-reason": _safe_header_value(decision.reason),
             },
         )
     except Exception as exc:
@@ -106,6 +114,10 @@ def _fetch_id_token(audience: str) -> str | None:
         return id_token.fetch_id_token(AuthRequest(), audience)
     except Exception:
         return None
+
+
+def _safe_header_value(value: str) -> str:
+    return " ".join(value.split())[:500]
 
 
 routes = [

@@ -62,9 +62,9 @@ def load_settings() -> Settings:
 
     return Settings(
         google_cloud_project=project,
-        google_cloud_location=os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1").strip(),
+        google_cloud_location=os.getenv("GOOGLE_CLOUD_LOCATION", "global").strip(),
         google_genai_use_vertexai=_parse_bool(os.getenv("GOOGLE_GENAI_USE_VERTEXAI", "true")),
-        agent_model=os.getenv("AGENT_MODEL", "gemini-2.0-flash").strip(),
+        agent_model=os.getenv("AGENT_MODEL", "gemini-3.5-flash").strip(),
         a2a_public_url=os.getenv("A2A_PUBLIC_URL", "").strip() or None,
         bigquery_tables=tuple(tables),
         bigquery_max_bytes_billed=_parse_int("BIGQUERY_MAX_BYTES_BILLED", 1_000_000_000),

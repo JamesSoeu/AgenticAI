@@ -6,11 +6,16 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class RouterSettings:
+    google_cloud_project: str
+    google_cloud_location: str
+    google_genai_use_vertexai: bool
+    router_model: str
     router_name: str
     router_public_url: str | None
     data_agent_url: str
     map_agent_url: str
     default_agent: str
+    classifier_min_confidence: float
     request_timeout_seconds: float
     use_id_token: bool
     port: int
@@ -18,11 +23,16 @@ class RouterSettings:
 
 def load_settings() -> RouterSettings:
     return RouterSettings(
+        google_cloud_project=os.getenv("GOOGLE_CLOUD_PROJECT", "").strip(),
+        google_cloud_location=os.getenv("GOOGLE_CLOUD_LOCATION", "global").strip(),
+        google_genai_use_vertexai=_parse_bool(os.getenv("GOOGLE_GENAI_USE_VERTEXAI", "true")),
+        router_model=os.getenv("ROUTER_MODEL", "gemini-3.5-flash").strip(),
         router_name=os.getenv("ROUTER_NAME", "Transportation Orchestrator Agent").strip(),
         router_public_url=os.getenv("ROUTER_PUBLIC_URL", "").strip() or None,
         data_agent_url=_normalize_base_url(os.getenv("DATA_AGENT_URL", "")),
         map_agent_url=_normalize_base_url(os.getenv("MAP_AGENT_URL", "")),
         default_agent=os.getenv("ROUTER_DEFAULT_AGENT", "data").strip().lower(),
+        classifier_min_confidence=float(os.getenv("ROUTER_CLASSIFIER_MIN_CONFIDENCE", "0.65")),
         request_timeout_seconds=float(os.getenv("ROUTER_REQUEST_TIMEOUT_SECONDS", "120")),
         use_id_token=_parse_bool(os.getenv("ROUTER_USE_ID_TOKEN", "false")),
         port=int(os.getenv("PORT", "8080")),

@@ -16,3 +16,4 @@ output/
 outputs/
 work/
 *.log
+~$*.docx

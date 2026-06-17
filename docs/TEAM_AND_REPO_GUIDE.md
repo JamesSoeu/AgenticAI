@@ -17,11 +17,22 @@ Gemini Enterprise should register only the router agent:
 https://YOUR-ROUTER-URL/.well-known/agent-card.json
 ```
 
-The router then forwards each request to the correct specialist service.
+The router uses a Gemini LLM classifier to choose the correct specialist
+service, then forwards the original A2A request to that service.
 
 The router Agent Card must include the A2A `protocolVersion` field. If Gemini
 Enterprise says `Missing required field: "protocolVersion"`, redeploy
 `router-agent/` and import the latest router card.
+
+The recommended model configuration for all three services is:
+
+```text
+Cloud Run region: us-central1
+Gemini model location: global
+Router classifier model: gemini-3.5-flash
+Data agent model: gemini-3.5-flash
+Map agent model: gemini-3.5-flash
+```
 
 ## Recommended Cloud Run Services
 
@@ -122,7 +133,7 @@ gcloud services enable secretmanager.googleapis.com maps-embed-backend.googleapi
   -ProjectId us-con-gcp-sbx-dep0049-081624 `
   -Region us-central1 `
   -ServiceName ge-map-a2a-agent `
-  -Model gemini-2.5-flash
+  -Model gemini-3.5-flash
 Pop-Location
 ```
 
@@ -139,6 +150,16 @@ gcloud run deploy ge-transport-router-agent `
   --allow-unauthenticated `
   --env-vars-file cloudrun-env.yaml
 Pop-Location
+```
+
+Before deploying the router, confirm `router-agent/cloudrun-env.yaml` includes:
+
+```yaml
+GOOGLE_CLOUD_PROJECT: "us-con-gcp-sbx-dep0049-081624"
+GOOGLE_CLOUD_LOCATION: "global"
+GOOGLE_GENAI_USE_VERTEXAI: "true"
+ROUTER_MODEL: "gemini-3.5-flash"
+ROUTER_CLASSIFIER_MIN_CONFIDENCE: "0.65"
 ```
 
 After the router deploys, get its URL:

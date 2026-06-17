@@ -25,7 +25,7 @@ Important values:
 ```yaml
 GOOGLE_CLOUD_PROJECT: "us-con-gcp-sbx-dep0049-081624"
 GOOGLE_CLOUD_LOCATION: "global"
-MODEL: "gemini-2.5-flash"
+MODEL: "gemini-3.5-flash"
 BRIDGE_BIGQUERY_TABLE: "us-con-gcp-sbx-dep0049-081624.bridge_inventory.bridge_data"
 BIGQUERY_JOB_PROJECT: "us-con-gcp-sbx-dep0049-081624"
 GOOGLE_MAPS_SECRET_NAME: "google_map_api_key"
@@ -63,7 +63,7 @@ gcloud services enable secretmanager.googleapis.com maps-embed-backend.googleapi
   -ProjectId us-con-gcp-sbx-dep0049-081624 `
   -Region us-central1 `
   -ServiceName ge-map-a2a-agent `
-  -Model gemini-2.5-flash
+  -Model gemini-3.5-flash
 ```
 
 After deployment, copy the map Cloud Run URL into:

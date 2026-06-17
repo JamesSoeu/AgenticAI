@@ -8,6 +8,16 @@ It handles:
 - Cloud Storage object listing
 - Text and PDF extraction from the configured bucket
 
+Recommended Gemini model settings:
+
+```yaml
+GOOGLE_CLOUD_LOCATION: "global"
+AGENT_MODEL: "gemini-3.5-flash"
+```
+
+Cloud Run can still deploy in `us-central1`. The model location is separate
+from the Cloud Run service region.
+
 Deploy from this folder:
 
 ```powershell

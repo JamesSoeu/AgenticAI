@@ -79,7 +79,7 @@ Push-Location map-agent
   -ProjectId us-con-gcp-sbx-dep0049-081624 `
   -Region us-central1 `
   -ServiceName ge-map-a2a-agent `
-  -Model gemini-2.5-flash
+  -Model gemini-3.5-flash
 Pop-Location
 ```
 
