@@ -19,6 +19,10 @@ https://YOUR-ROUTER-URL/.well-known/agent-card.json
 
 The router then forwards each request to the correct specialist service.
 
+The router Agent Card must include the A2A `protocolVersion` field. If Gemini
+Enterprise says `Missing required field: "protocolVersion"`, redeploy
+`router-agent/` and import the latest router card.
+
 ## Recommended Cloud Run Services
 
 Use one Google Cloud project and three separate Cloud Run services:
@@ -151,6 +155,14 @@ router, then register:
 
 ```text
 https://YOUR-ROUTER-URL/.well-known/agent-card.json
+```
+
+The imported JSON should include:
+
+```json
+{
+  "protocolVersion": "0.3.0"
+}
 ```
 
 ## Private Versus Public Cloud Run

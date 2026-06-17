@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import unittest
 
+from orchestrator_router.card import build_agent_card
+from orchestrator_router.config import RouterSettings
 from orchestrator_router.routing import extract_text, route_request
 
 
@@ -42,6 +44,25 @@ class RouterTests(unittest.TestCase):
         route = route_request("Show crash counts by severity for the latest year")
 
         self.assertEqual(route, "data")
+
+    def test_agent_card_has_gemini_enterprise_required_fields(self):
+        settings = RouterSettings(
+            router_name="Transportation Orchestrator Agent",
+            router_public_url="https://router.example.com",
+            data_agent_url="https://data.example.com",
+            map_agent_url="https://map.example.com",
+            default_agent="data",
+            request_timeout_seconds=120,
+            use_id_token=False,
+            port=8080,
+        )
+        card = build_agent_card(settings)
+
+        self.assertEqual(card["protocolVersion"], "0.3.0")
+        self.assertIn("name", card)
+        self.assertIn("url", card)
+        self.assertIn("capabilities", card)
+        self.assertIn("skills", card)
 
 
 if __name__ == "__main__":

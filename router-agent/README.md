@@ -30,6 +30,9 @@ Register this with Gemini Enterprise:
 https://YOUR-ROUTER-URL/.well-known/agent-card.json
 ```
 
+The router Agent Card includes the A2A `protocolVersion` field required by the
+Gemini Enterprise import screen.
+
 Test prompts:
 
 ```text
