@@ -1,0 +1,25 @@
+Please grant my user:
+- roles/run.sourceDeveloper on PROJECT_ID
+- roles/serviceusage.serviceUsageConsumer on PROJECT_ID
+- roles/serviceusage.serviceUsageAdmin on PROJECT_ID, so I can enable required APIs in the future
+- roles/iam.serviceAccountUser on orchestrator-sa, data-agent-sa, and map-agent-sa
+- roles/iam.serviceAccountOpenIdTokenCreator or roles/iam.serviceAccountTokenCreator on orchestrator-sa for private Cloud Run testing
+
+Please grant the Cloud Build/build service account:
+- roles/run.builder on PROJECT_ID
+
+Please grant orchestrator-sa:
+- roles/aiplatform.user on PROJECT_ID
+- roles/run.invoker on ge-data-a2a-agent
+- roles/run.invoker on ge-map-a2a-agent
+
+Please grant data-agent-sa:
+- roles/aiplatform.user on PROJECT_ID
+- roles/bigquery.jobUser on PROJECT_ID
+- roles/bigquery.dataViewer on required BigQuery datasets
+- roles/storage.objectViewer on required GCS buckets
+
+Please grant map-agent-sa:
+- roles/aiplatform.user on PROJECT_ID
+- roles/bigquery.jobUser on PROJECT_ID
+- roles/bigquery.dataViewer on required BigQuery datasets
