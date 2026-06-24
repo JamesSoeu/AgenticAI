@@ -1,25 +1,59 @@
-Please grant my user:
-- roles/run.sourceDeveloper on PROJECT_ID
-- roles/serviceusage.serviceUsageConsumer on PROJECT_ID
-- roles/serviceusage.serviceUsageAdmin on PROJECT_ID, so I can enable required APIs in the future
-- roles/iam.serviceAccountUser on orchestrator-sa, data-agent-sa, and map-agent-sa
-- roles/iam.serviceAccountOpenIdTokenCreator or roles/iam.serviceAccountTokenCreator on orchestrator-sa for private Cloud Run testing
+Please grant my user the following roles on PROJECT_ID so I can manage future A2A agent deployments without repeated IAM requests:
 
-Please grant the Cloud Build/build service account:
-- roles/run.builder on PROJECT_ID
+- roles/run.admin
+- roles/iam.serviceAccountAdmin
+- roles/iam.serviceAccountUser
+- roles/resourcemanager.projectIamAdmin
+- roles/serviceusage.serviceUsageAdmin
+- roles/artifactregistry.admin
+- roles/cloudbuild.builds.editor
+- roles/aiplatform.user
+- roles/bigquery.jobUser
 
-Please grant orchestrator-sa:
-- roles/aiplatform.user on PROJECT_ID
-- roles/run.invoker on ge-data-a2a-agent
-- roles/run.invoker on ge-map-a2a-agent
+For data access, please also grant either:
+- roles/bigquery.admin and roles/storage.admin
 
-Please grant data-agent-sa:
-- roles/aiplatform.user on PROJECT_ID
-- roles/bigquery.jobUser on PROJECT_ID
-- roles/bigquery.dataViewer on required BigQuery datasets
-- roles/storage.objectViewer on required GCS buckets
+Or safer scoped access:
+- roles/bigquery.dataOwner on the required BigQuery datasets
+- roles/storage.objectAdmin on the required GCS buckets
 
-Please grant map-agent-sa:
-- roles/aiplatform.user on PROJECT_ID
-- roles/bigquery.jobUser on PROJECT_ID
-- roles/bigquery.dataViewer on required BigQuery datasets
+For private Cloud Run testing and service account impersonation:
+- roles/iam.serviceAccountTokenCreator on the agent service accounts I manage
+
+
+
+roles/run.admin
+Allows you to create, update, delete, and configure Cloud Run services.
+
+roles/iam.serviceAccountAdmin
+Allows you to create and manage service accounts.
+
+roles/iam.serviceAccountUser
+Allows you to attach service accounts to Cloud Run services. This fixes the iam.serviceAccounts.actAs error.
+
+roles/resourcemanager.projectIamAdmin
+Allows you to grant project-level IAM roles to service accounts and users.
+
+roles/serviceusage.serviceUsageAdmin
+Allows you to enable required APIs, like Cloud Run, Cloud Build, Vertex AI, BigQuery, Storage, IAM Credentials.
+
+roles/artifactregistry.admin
+Allows you to manage Artifact Registry repositories/images used by Cloud Run deployments.
+
+roles/cloudbuild.builds.editor
+Allows you to run/manage Cloud Build builds.
+Also Ask For Dataset/Bucket-Level Admin Where Needed
+For BigQuery:
+roles/bigquery.admin
+Or safer:
+roles/bigquery.dataOwner on only the required datasets
+roles/bigquery.jobUser on the project
+For Cloud Storage:
+roles/storage.admin
+Or safer:
+roles/storage.objectAdmin on only the required buckets
+For Vertex AI / Gemini Models
+roles/aiplatform.user
+For Private Cloud Run Testing / Token Generation
+If you want to impersonate service accounts and test private Cloud Run:
+roles/iam.serviceAccountTokenCreator
