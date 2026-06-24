@@ -62,7 +62,7 @@ notepad cloudrun-env.yaml
 gcloud run deploy ge-data-a2a-agent `
   --source . `
   --region us-central1 `
-  --project us-con-gcp-sbx-dep0049-081624 `
+  --project YOUR_PROJECT_ID `
   --allow-unauthenticated `
   --env-vars-file cloudrun-env.yaml
 Pop-Location
@@ -73,10 +73,10 @@ Deploy map:
 ```powershell
 Push-Location map-agent
 .\scripts\set_maps_secret.ps1 `
-  -ProjectId us-con-gcp-sbx-dep0049-081624 `
+  -ProjectId YOUR_PROJECT_ID `
   -MapsApiKey "YOUR_MAPS_API_KEY"
 .\scripts\deploy_cloud_run.ps1 `
-  -ProjectId us-con-gcp-sbx-dep0049-081624 `
+  -ProjectId YOUR_PROJECT_ID `
   -Region us-central1 `
   -ServiceName ge-map-a2a-agent `
   -Model gemini-3.5-flash
@@ -92,7 +92,7 @@ notepad cloudrun-env.yaml
 gcloud run deploy ge-transport-router-agent `
   --source . `
   --region us-central1 `
-  --project us-con-gcp-sbx-dep0049-081624 `
+  --project YOUR_PROJECT_ID `
   --allow-unauthenticated `
   --env-vars-file cloudrun-env.yaml
 Pop-Location

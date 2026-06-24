@@ -6,10 +6,15 @@ It handles:
 
 - Bridge search from BigQuery
 - A2UI response creation for Gemini Enterprise
-- Google Maps Embed URL proxying through `/maps/embed`
+- WebFrameUrl map responses for Gemini Enterprise
+- Cloud Run-hosted interactive Google Maps JavaScript page with bridge pins,
+  not directions routes
+- Google Maps Embed URL proxying through `/maps/embed` for compatibility links
 
 There is no separate frontend folder in this monorepo version. Gemini Enterprise
-is the client that renders the A2UI map response.
+is the client that renders the A2UI `WebFrameUrl` response. Multiple bridge
+results are displayed as pins on one map so the user can inspect assets without
+seeing a route, origin, destination, or waypoint list.
 
 ## Configure
 
@@ -23,11 +28,12 @@ notepad cloudrun-env.yaml
 Important values:
 
 ```yaml
-GOOGLE_CLOUD_PROJECT: "us-con-gcp-sbx-dep0049-081624"
+GOOGLE_CLOUD_PROJECT: "YOUR_PROJECT_ID"
 GOOGLE_CLOUD_LOCATION: "global"
 MODEL: "gemini-3.5-flash"
-BRIDGE_BIGQUERY_TABLE: "us-con-gcp-sbx-dep0049-081624.bridge_inventory.bridge_data"
-BIGQUERY_JOB_PROJECT: "us-con-gcp-sbx-dep0049-081624"
+AGENT_URL: "https://YOUR-MAP-AGENT-URL.run.app"
+BRIDGE_BIGQUERY_TABLE: "your-project-id.transportation.bridge_data"
+BIGQUERY_JOB_PROJECT: "YOUR_PROJECT_ID"
 GOOGLE_MAPS_SECRET_NAME: "google_map_api_key"
 ```
 
@@ -46,21 +52,26 @@ curl.exe http://localhost:8000/.well-known/agent-card.json
 
 ## Google Maps Secret
 
-Create or update the Maps Embed API key secret:
+Create or update the Google Maps API key secret. The key must allow the Maps
+JavaScript API for `/bridge-map` and Maps Embed API for the compatibility
+`/maps/embed` endpoint:
 
 ```powershell
-gcloud services enable secretmanager.googleapis.com maps-embed-backend.googleapis.com --project us-con-gcp-sbx-dep0049-081624
+gcloud services enable secretmanager.googleapis.com maps-backend.googleapis.com maps-embed-backend.googleapis.com --project YOUR_PROJECT_ID
 
 .\scripts\set_maps_secret.ps1 `
-  -ProjectId us-con-gcp-sbx-dep0049-081624 `
+  -ProjectId YOUR_PROJECT_ID `
   -MapsApiKey "YOUR_MAPS_API_KEY"
 ```
+
+For production, restrict the browser key by HTTP referrer to the deployed map
+agent Cloud Run domain.
 
 ## Deploy
 
 ```powershell
 .\scripts\deploy_cloud_run.ps1 `
-  -ProjectId us-con-gcp-sbx-dep0049-081624 `
+  -ProjectId YOUR_PROJECT_ID `
   -Region us-central1 `
   -ServiceName ge-map-a2a-agent `
   -Model gemini-3.5-flash
@@ -83,7 +94,8 @@ Where is this bridge located?
 
 ## Key Files
 
-- `app/main.py`: A2A Starlette application and `/maps/embed` proxy.
+- `app/main.py`: A2A Starlette application, `/bridge-map` pin map page, and
+  `/maps/embed` compatibility proxy.
 - `app/agent.py`: ADK bridge inventory agent and agent card.
 - `app/agent_executor.py`: Converts ADK events into A2A/A2UI responses.
 - `app/bridge_tools.py`: BigQuery bridge search tool.

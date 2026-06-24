@@ -30,13 +30,67 @@ notepad cloudrun-env.yaml
 gcloud run deploy ge-transport-router-agent `
   --source . `
   --region us-central1 `
-  --project us-con-gcp-sbx-dep0049-081624 `
+  --project YOUR_PROJECT_ID `
   --allow-unauthenticated `
   --env-vars-file cloudrun-env.yaml
 ```
 
 After deploy, update `ROUTER_PUBLIC_URL` in `cloudrun-env.yaml` with the Cloud
 Run URL and redeploy.
+
+## Private child agent authentication
+
+The router supports calling data and map agents deployed with Cloud Run
+authentication required. Set this in `cloudrun-env.yaml`:
+
+```yaml
+ROUTER_USE_ID_TOKEN: "true"
+DATA_AGENT_URL: "https://YOUR-DATA-AGENT-URL.run.app"
+MAP_AGENT_URL: "https://YOUR-MAP-AGENT-URL.run.app"
+```
+
+When `ROUTER_USE_ID_TOKEN` is true, the router fetches a Google-signed ID token
+from the Cloud Run metadata credentials and sends it to the selected child agent:
+
+```text
+Authorization: Bearer <ID_TOKEN>
+```
+
+The token audience defaults to `DATA_AGENT_URL` or `MAP_AGENT_URL`. If either
+URL points through a proxy, path, gateway, or custom domain, set the audience to
+the actual target Cloud Run service base URL:
+
+```yaml
+DATA_AGENT_AUDIENCE: "https://YOUR-DATA-AGENT-URL.run.app"
+MAP_AGENT_AUDIENCE: "https://YOUR-MAP-AGENT-URL.run.app"
+```
+
+The router Cloud Run service account must have `roles/run.invoker` on each
+private child service:
+
+```powershell
+gcloud run services add-iam-policy-binding ge-data-a2a-agent `
+  --region us-central1 `
+  --member "serviceAccount:orchestrator-sa@YOUR_PROJECT_ID.iam.gserviceaccount.com" `
+  --role "roles/run.invoker"
+
+gcloud run services add-iam-policy-binding ge-map-a2a-agent `
+  --region us-central1 `
+  --member "serviceAccount:orchestrator-sa@YOUR_PROJECT_ID.iam.gserviceaccount.com" `
+  --role "roles/run.invoker"
+```
+
+Deploy the router with that service account:
+
+```powershell
+gcloud run deploy ge-transport-router-agent `
+  --source . `
+  --region us-central1 `
+  --project YOUR_PROJECT_ID `
+  --allow-unauthenticated `
+  --service-account orchestrator-sa@YOUR_PROJECT_ID.iam.gserviceaccount.com `
+  --env-vars-file cloudrun-env.yaml
+```
 
 Register this with Gemini Enterprise:
 

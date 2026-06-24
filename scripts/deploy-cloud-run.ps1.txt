@@ -1,0 +1,98 @@
+param(
+    [string]$EnvFile = ".env",
+    [string]$ServiceName = "enterprise-data-a2a-agent",
+    [switch]$AllowUnauthenticated
+)
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = "Stop"
+
+. .\scripts\set-env.ps1 -Path $EnvFile
+
+$required = @(
+    "GOOGLE_CLOUD_PROJECT",
+    "GOOGLE_CLOUD_LOCATION",
+    "BIGQUERY_TABLES",
+    "GCS_BUCKET_NAME"
+)
+
+foreach ($name in $required) {
+    if (-not [Environment]::GetEnvironmentVariable($name, "Process")) {
+        throw "Set $name in $EnvFile."
+    }
+}
+
+$defaults = @{
+    SERVICE_NAME = $ServiceName
+    AGENT_MODEL = "gemini-2.0-flash"
+    GOOGLE_GENAI_USE_VERTEXAI = "true"
+    BIGQUERY_TABLE_ALIASES = ""
+    BIGQUERY_MAX_BYTES_BILLED = "1000000000"
+    BIGQUERY_DEFAULT_LIMIT = "100"
+    BIGQUERY_MAX_LIMIT = "1000"
+    GCS_PREFIX = ""
+    GCS_MAX_TEXT_BYTES = "200000"
+    GCS_MAX_PDF_BYTES = "25000000"
+    GCS_MAX_PDF_PAGES = "20"
+    GCS_MAX_PDF_TEXT_CHARS = "60000"
+    A2A_PUBLIC_URL = ""
+}
+
+foreach ($item in $defaults.GetEnumerator()) {
+    if (-not [Environment]::GetEnvironmentVariable($item.Key, "Process")) {
+        [Environment]::SetEnvironmentVariable($item.Key, $item.Value, "Process")
+    }
+}
+
+$envFilePath = Join-Path $env:TEMP ("a2a-agent-env-{0}.yaml" -f ([Guid]::NewGuid()))
+
+function Add-EnvVar {
+    param(
+        [string]$Name
+    )
+
+    $value = [Environment]::GetEnvironmentVariable($Name, "Process")
+    if ($null -eq $value) {
+        $value = ""
+    }
+    $escaped = $value.Replace("\", "\\").Replace('"', '\"')
+    Add-Content -Path $envFilePath -Value ('{0}: "{1}"' -f $Name, $escaped)
+}
+
+try {
+    @(
+        "GOOGLE_CLOUD_PROJECT",
+        "GOOGLE_CLOUD_LOCATION",
+        "GOOGLE_GENAI_USE_VERTEXAI",
+        "AGENT_MODEL",
+        "BIGQUERY_TABLES",
+        "BIGQUERY_TABLE_ALIASES",
+        "BIGQUERY_MAX_BYTES_BILLED",
+        "BIGQUERY_DEFAULT_LIMIT",
+        "BIGQUERY_MAX_LIMIT",
+        "GCS_BUCKET_NAME",
+        "GCS_PREFIX",
+        "GCS_MAX_TEXT_BYTES",
+        "GCS_MAX_PDF_BYTES",
+        "GCS_MAX_PDF_PAGES",
+        "GCS_MAX_PDF_TEXT_CHARS",
+        "A2A_PUBLIC_URL"
+    ) | ForEach-Object { Add-EnvVar -Name $_ }
+
+    $authFlag = "--no-allow-unauthenticated"
+    if ($AllowUnauthenticated) {
+        $authFlag = "--allow-unauthenticated"
+    }
+
+    gcloud run deploy $ServiceName `
+        --source . `
+        --region $env:GOOGLE_CLOUD_LOCATION `
+        --project $env:GOOGLE_CLOUD_PROJECT `
+        $authFlag `
+        --env-vars-file $envFilePath
+}
+finally {
+    if (Test-Path $envFilePath) {
+        Remove-Item $envFilePath -Force
+    }
+}

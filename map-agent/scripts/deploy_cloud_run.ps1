@@ -6,7 +6,7 @@ param(
     [string]$MapsSecret = $(if ($env:GOOGLE_MAPS_SECRET_NAME) { $env:GOOGLE_MAPS_SECRET_NAME } else { "google_map_api_key" }),
     [string]$RuntimeServiceAccountName = $(if ($env:RUNTIME_SA_NAME) { $env:RUNTIME_SA_NAME } else { "bridge-map-agent-sa" }),
     [string]$Model = $(if ($env:MODEL) { $env:MODEL } else { "gemini-3.5-flash" }),
-    [string]$BridgeBigQueryTable = $(if ($env:BRIDGE_BIGQUERY_TABLE) { $env:BRIDGE_BIGQUERY_TABLE } else { "us-con-gcp-sbx-dep0049-081624.bridge_inventory.bridge_data" }),
+    [string]$BridgeBigQueryTable = $(if ($env:BRIDGE_BIGQUERY_TABLE) { $env:BRIDGE_BIGQUERY_TABLE } else { "your-project-id.transportation.bridge_data" }),
     [string]$BridgeDataProject = $env:BRIDGE_DATA_PROJECT,
     [string]$BigQueryLocation = $env:BIGQUERY_LOCATION
 )

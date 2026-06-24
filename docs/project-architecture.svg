@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="900" viewBox="0 0 1400 900" role="img" aria-labelledby="title desc">
+  <title id="title">Gemini Enterprise Multi-Agent Architecture</title>
+  <desc id="desc">Architecture diagram showing Gemini Enterprise connected to router, data, and map agents on Cloud Run with BigQuery, Cloud Storage, Secret Manager, Google Maps, Vertex AI, and Cloud Logging.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#334155"/>
+    </marker>
+    <style>
+      .bg { fill: #f8fafc; }
+      .title { font: 700 30px Arial, sans-serif; fill: #0f172a; }
+      .subtitle { font: 400 16px Arial, sans-serif; fill: #475569; }
+      .group { fill: #ffffff; stroke: #cbd5e1; stroke-width: 2; rx: 18; }
+      .box { fill: #ffffff; stroke: #64748b; stroke-width: 2; rx: 12; }
+      .primary { fill: #e0f2fe; stroke: #0284c7; }
+      .router { fill: #ecfeff; stroke: #0891b2; }
+      .data { fill: #f0fdf4; stroke: #16a34a; }
+      .map { fill: #fff7ed; stroke: #ea580c; }
+      .service { fill: #f1f5f9; stroke: #475569; }
+      .label { font: 700 17px Arial, sans-serif; fill: #0f172a; }
+      .small { font: 400 13px Arial, sans-serif; fill: #334155; }
+      .tiny { font: 400 12px Arial, sans-serif; fill: #475569; }
+      .arrow { stroke: #334155; stroke-width: 2.2; fill: none; marker-end: url(#arrow); }
+      .dashed { stroke-dasharray: 8 6; }
+      .section { font: 700 15px Arial, sans-serif; fill: #334155; }
+    </style>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1400" height="900"/>
+  <text class="title" x="48" y="54">Gemini Enterprise Multi-Agent Architecture</text>
+  <text class="subtitle" x="48" y="82">One repository, three Cloud Run services, A2A protocol routing, BigQuery, Cloud Storage, and interactive map pins.</text>
+
+  <rect class="group" x="40" y="120" width="1320" height="680"/>
+  <text class="section" x="70" y="150">Runtime request path</text>
+
+  <rect class="box primary" x="90" y="230" width="210" height="92"/>
+  <text class="label" x="120" y="260">Business User</text>
+  <text class="small" x="120" y="286">Asks questions in</text>
+  <text class="small" x="120" y="306">Gemini Enterprise</text>
+
+  <rect class="box primary" x="370" y="210" width="240" height="132"/>
+  <text class="label" x="400" y="242">Gemini Enterprise</text>
+  <text class="small" x="400" y="270">Imports router agent card</text>
+  <text class="small" x="400" y="292">Sends A2A messages</text>
+  <text class="small" x="400" y="314">Renders text and A2UI</text>
+
+  <rect class="box router" x="700" y="190" width="260" height="172"/>
+  <text class="label" x="730" y="222">Router Agent</text>
+  <text class="small" x="730" y="250">Cloud Run service</text>
+  <text class="small" x="730" y="272">ADK + A2A server</text>
+  <text class="small" x="730" y="294">LLM route classifier</text>
+  <text class="small" x="730" y="316">Calls specialist agents</text>
+  <text class="tiny" x="730" y="342">Folder: router-agent/</text>
+
+  <rect class="box data" x="1060" y="135" width="250" height="180"/>
+  <text class="label" x="1090" y="168">Data Agent</text>
+  <text class="small" x="1090" y="196">Cloud Run service</text>
+  <text class="small" x="1090" y="218">BigQuery analytics</text>
+  <text class="small" x="1090" y="240">Cloud Storage docs/PDFs</text>
+  <text class="small" x="1090" y="262">SQL + document answers</text>
+  <text class="tiny" x="1090" y="290">Folder: data-agent/</text>
+
+  <rect class="box map" x="1060" y="370" width="250" height="190"/>
+  <text class="label" x="1090" y="404">Map Agent</text>
+  <text class="small" x="1090" y="432">Cloud Run service</text>
+  <text class="small" x="1090" y="454">Bridge inventory lookup</text>
+  <text class="small" x="1090" y="476">A2UI WebFrameUrl</text>
+  <text class="small" x="1090" y="498">/bridge-map with pins</text>
+  <text class="small" x="1090" y="520">No directions route</text>
+  <text class="tiny" x="1090" y="548">Folder: map-agent/</text>
+
+  <path class="arrow" d="M300 276 H370"/>
+  <path class="arrow" d="M610 276 H700"/>
+  <path class="arrow" d="M960 260 C1005 240 1015 220 1060 220"/>
+  <path class="arrow" d="M960 300 C1010 340 1010 455 1060 455"/>
+
+  <text class="tiny" x="318" y="260">Ask</text>
+  <text class="tiny" x="622" y="260">A2A</text>
+  <text class="tiny" x="975" y="232">data/doc questions</text>
+  <text class="tiny" x="976" y="425">map/location questions</text>
+
+  <rect class="group" x="90" y="610" width="1220" height="150"/>
+  <text class="section" x="120" y="640">Google Cloud features used</text>
+
+  <rect class="box service" x="125" y="665" width="170" height="62"/>
+  <text class="label" x="150" y="690">Vertex AI</text>
+  <text class="tiny" x="150" y="712">Gemini models</text>
+
+  <rect class="box service" x="330" y="665" width="170" height="62"/>
+  <text class="label" x="355" y="690">BigQuery</text>
+  <text class="tiny" x="355" y="712">Tables + analytics</text>
+
+  <rect class="box service" x="535" y="665" width="190" height="62"/>
+  <text class="label" x="560" y="690">Cloud Storage</text>
+  <text class="tiny" x="560" y="712">PDF/text documents</text>
+
+  <rect class="box service" x="760" y="665" width="190" height="62"/>
+  <text class="label" x="785" y="690">Secret Manager</text>
+  <text class="tiny" x="785" y="712">Maps API key</text>
+
+  <rect class="box service" x="985" y="665" width="170" height="62"/>
+  <text class="label" x="1010" y="690">Google Maps</text>
+  <text class="tiny" x="1010" y="712">Interactive pins</text>
+
+  <rect class="box service" x="1190" y="665" width="90" height="62"/>
+  <text class="label" x="1205" y="690">Logs</text>
+  <text class="tiny" x="1205" y="712">Cloud Run</text>
+
+  <path class="arrow dashed" d="M830 362 V520 C830 650 210 650 210 665"/>
+  <path class="arrow dashed" d="M1185 315 V650 C1185 650 415 650 415 665"/>
+  <path class="arrow dashed" d="M1185 315 V650 C1185 650 630 650 630 665"/>
+  <path class="arrow dashed" d="M1185 560 V650 C1185 650 855 650 855 665"/>
+  <path class="arrow dashed" d="M1185 560 V650 C1185 650 1070 650 1070 665"/>
+
+  <rect class="group" x="90" y="820" width="1220" height="48"/>
+  <text class="small" x="120" y="850">Recommended deployment: keep one GitHub repository, deploy router-agent, data-agent, and map-agent as three separate Cloud Run services.</text>
+</svg>

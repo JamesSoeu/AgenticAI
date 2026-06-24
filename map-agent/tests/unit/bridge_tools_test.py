@@ -26,7 +26,7 @@ def test_search_bridges_uses_parameterized_query(mock_client_class):
 
     assert result["status"] == "success"
     assert "SELECT" in sql
-    assert "FROM `us-con-gcp-sbx-dep0049-081624.bridge_inventory.bridge_data`" in sql
+    assert "FROM `your-project-id.transportation.bridge_data`" in sql
     assert "creek" not in sql
     assert "001" not in sql
     assert parameters["query"] == "%creek%"
@@ -57,10 +57,22 @@ def test_search_bridges_returns_key_columns_and_single_bridge_map_path(mock_clie
     assert result["count"] == 1
     assert bridge["structure_id"] == "0123456"
     assert bridge["feature_crossed"] == "Example Creek"
-    assert (
-        result["all_bridges_map_embed_path"]
-        == "/maps/embed?mode=place&q=38.9351%2C-83.4596"
+    assert result["all_bridges_map"]["center"] == {"lat": 38.9351, "lng": -83.4596}
+    assert result["all_bridges_map"]["zoom"] == 14
+    assert result["all_bridges_map"]["frame_url"].startswith(
+        "http://127.0.0.1:8000/bridge-map?data="
     )
+    assert result["all_bridges_map"]["pins"] == [
+        {
+            "lat": 38.9351,
+            "lng": -83.4596,
+            "name": "Bridge 1: SFN 0123456",
+            "description": (
+                "Route: SR-001 | Feature: Example Creek | "
+                "Location: Example location | County: 001"
+            ),
+        }
+    ]
 
 
 @patch("app.bridge_tools.bigquery.Client")
@@ -98,13 +110,20 @@ def test_search_bridges_puts_all_bridge_coordinates_on_one_map(mock_client_class
     ]
 
     result = search_bridges(county_code="001")
-    path = result["all_bridges_map_embed_path"]
+    map_data = result["all_bridges_map"]
 
     assert result["count"] == 3
-    assert path.startswith("/maps/embed?mode=directions")
-    assert "origin=38.1%2C-83.1" in path
-    assert "waypoints=38.2%2C-83.2" in path
-    assert "destination=38.3%2C-83.3" in path
+    assert map_data["center"] == {"lat": 38.2, "lng": -83.2}
+    assert map_data["zoom"] == 10
+    assert map_data["frame_url"].startswith(
+        "http://127.0.0.1:8000/bridge-map?data="
+    )
+    assert [pin["name"] for pin in map_data["pins"]] == [
+        "Bridge 1: SFN 1",
+        "Bridge 2: SFN 2",
+        "Bridge 3: SFN 3",
+    ]
+    assert "directions" not in str(map_data)
     assert sum("map_embed_path" in bridge for bridge in result["bridges"]) == 0
 
 
@@ -139,7 +158,10 @@ def test_search_bridges_returns_render_ready_a2ui_for_gemini_enterprise(
     assert "beginRendering" in messages[0]
     assert "surfaceUpdate" in messages[1]
     assert "Bridge Search Results" in str(messages)
-    assert result["all_bridges_map_embed_path"] in str(messages)
+    assert "WebFrameUrl" in str(messages)
+    assert "/bridge-map?data=" in str(messages)
+    assert "directions" not in str(messages)
+    assert "Bridge 1: SFN 1" in str(messages)
     assert tool_context.actions.skip_summarization is True
 
 

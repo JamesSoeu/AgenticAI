@@ -181,18 +181,20 @@ notepad cloudrun-env.yaml
 Example `cloudrun-env.yaml`:
 
 ```yaml
-GOOGLE_CLOUD_PROJECT: "us-con-gcp-sbx-dep0049-081624"
+GOOGLE_CLOUD_PROJECT: "YOUR_PROJECT_ID"
 GOOGLE_CLOUD_LOCATION: "global"
 GOOGLE_GENAI_USE_VERTEXAI: "true"
 ROUTER_MODEL: "gemini-3.5-flash"
 ROUTER_NAME: "Transportation Orchestrator Agent"
 ROUTER_PUBLIC_URL: "https://YOUR-ROUTER-URL"
 DATA_AGENT_URL: "https://YOUR-DATA-AGENT-URL"
+DATA_AGENT_AUDIENCE: ""
 MAP_AGENT_URL: "https://YOUR-MAP-AGENT-URL"
+MAP_AGENT_AUDIENCE: ""
 ROUTER_DEFAULT_AGENT: "data"
 ROUTER_CLASSIFIER_MIN_CONFIDENCE: "0.65"
 ROUTER_REQUEST_TIMEOUT_SECONDS: "120"
-ROUTER_USE_ID_TOKEN: "false"
+ROUTER_USE_ID_TOKEN: "true"
 ```
 
 Use empty `ROUTER_PUBLIC_URL` for the first deployment if you do not yet know
@@ -220,7 +222,7 @@ cd router-agent
 gcloud run deploy ge-transport-router-agent `
   --source . `
   --region us-central1 `
-  --project us-con-gcp-sbx-dep0049-081624 `
+  --project YOUR_PROJECT_ID `
   --allow-unauthenticated `
   --env-vars-file cloudrun-env.yaml
 ```
@@ -230,7 +232,7 @@ After deployment, get the router URL:
 ```powershell
 gcloud run services describe ge-transport-router-agent `
   --region us-central1 `
-  --project us-con-gcp-sbx-dep0049-081624 `
+  --project YOUR_PROJECT_ID `
   --format="value(status.url)"
 ```
 
@@ -403,9 +405,12 @@ Cause: Data or map Cloud Run service is private and router lacks permission.
 Fix:
 
 1. Set `ROUTER_USE_ID_TOKEN: "true"`.
-2. Grant the router service account `roles/run.invoker` on the data and map
+2. If a child URL uses a custom domain, proxy, or path, set
+   `DATA_AGENT_AUDIENCE` and `MAP_AGENT_AUDIENCE` to the real child Cloud Run
+   service base URLs.
+3. Grant the router service account `roles/run.invoker` on the data and map
    Cloud Run services.
-3. Redeploy router.
+4. Redeploy router.
 
 ## 14. Adding Another Agent Later
 

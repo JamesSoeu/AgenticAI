@@ -58,12 +58,13 @@ WORKFLOW_DESCRIPTION = """
 3. If the tool returns no bridges, clearly say no matching bridges were found
    and do not create an empty UI.
 4. The search tool automatically renders all returned key columns and one map
-   containing every bridge with valid coordinates.
+   containing every bridge with valid coordinates as pins. Do not ask Google
+   Maps to create a directions route between bridge locations.
 5. Never output raw JSON, Python code, A2UI markup, or a rendering function call.
 """
 
 class _MergedBasicCatalogProvider(A2uiCatalogProvider):
-    """Merge the v0.9 basic catalog with the bridge WebFrameUrl component."""
+    """Merge the v0.9 basic catalog with the bridge map components."""
 
     def __init__(self, custom_catalog_path: str):
         self._basic = BundledCatalogProvider(VERSION_0_9)

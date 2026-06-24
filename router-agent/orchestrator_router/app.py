@@ -9,6 +9,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 from starlette.routing import Route
 
+from orchestrator_router.auth import fetch_id_token, target_audience
 from orchestrator_router.card import build_agent_card
 from orchestrator_router.classifier import classify_route
 from orchestrator_router.config import RouterSettings, load_settings
@@ -29,6 +30,7 @@ async def healthz(_request: Request) -> JSONResponse:
             "classifier_model": settings.router_model,
             "classifier_location": settings.google_cloud_location,
             "classifier_min_confidence": settings.classifier_min_confidence,
+            "child_agent_auth": "cloud_run_id_token" if settings.use_id_token else "none",
         }
     )
 
@@ -44,7 +46,7 @@ async def route_a2a(request: Request) -> Response:
         decision = await asyncio.to_thread(classify_route, user_text, settings)
         target_base = _target_url(decision.route, settings)
         target_url = urljoin(f"{target_base}/", "")
-        headers = _forward_headers(request, target_base)
+        headers = await _forward_headers(request, decision.route, target_base)
 
         async with httpx.AsyncClient(timeout=settings.request_timeout_seconds) as client:
             response = await client.post(target_url, json=payload, headers=headers)
@@ -85,7 +87,7 @@ def _target_url(route: str, current_settings: RouterSettings) -> str:
     return current_settings.data_agent_url
 
 
-def _forward_headers(request: Request, target_base: str) -> dict[str, str]:
+async def _forward_headers(request: Request, route: str, target_base: str) -> dict[str, str]:
     headers: dict[str, str] = {
         "content-type": request.headers.get("content-type", "application/json"),
         "accept": request.headers.get("accept", "application/json"),
@@ -100,20 +102,10 @@ def _forward_headers(request: Request, target_base: str) -> dict[str, str]:
         if value:
             headers[header] = value
     if settings.use_id_token:
-        token = _fetch_id_token(target_base)
-        if token:
-            headers["authorization"] = f"Bearer {token}"
+        audience = target_audience(route, target_base, settings)
+        token = await asyncio.to_thread(fetch_id_token, audience)
+        headers["authorization"] = f"Bearer {token}"
     return headers
-
-
-def _fetch_id_token(audience: str) -> str | None:
-    try:
-        from google.auth.transport.requests import Request as AuthRequest
-        from google.oauth2 import id_token
-
-        return id_token.fetch_id_token(AuthRequest(), audience)
-    except Exception:
-        return None
 
 
 def _safe_header_value(value: str) -> str:

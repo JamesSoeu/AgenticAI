@@ -60,7 +60,7 @@ AGENT_URL: str = os.getenv("AGENT_URL", "http://127.0.0.1:8000")
 # ---------------------------------------------------------------------------
 BRIDGE_BIGQUERY_TABLE: str = os.getenv(
     "BRIDGE_BIGQUERY_TABLE",
-    "us-con-gcp-sbx-dep0049-081624.bridge_inventory.bridge_data",
+    "your-project-id.transportation.bridge_data",
 )
 BIGQUERY_JOB_PROJECT: str = os.getenv(
     "BIGQUERY_JOB_PROJECT",

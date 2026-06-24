@@ -48,7 +48,7 @@ if (-not ($Card.capabilities.extensions.uri -contains "https://a2ui.org/a2a-exte
 }
 Write-Host "Agent card OK: $($Card.name)"
 
-$MapUrl = "$ServiceUrl/maps/embed?mode=directions&origin=38.9351%2C-83.4596&destination=38.9451%2C-83.4696"
+$MapUrl = "$ServiceUrl/maps/embed?mode=place&q=38.9351%2C-83.4596"
 try {
     $Response = Invoke-WebRequest `
         -Uri $MapUrl `

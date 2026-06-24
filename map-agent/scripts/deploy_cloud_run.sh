@@ -8,7 +8,7 @@ PROJECT_ID="${PROJECT_ID:-$(gcloud config get-value project 2>/dev/null)}"
 MAPS_SECRET="${GOOGLE_MAPS_SECRET_NAME:-google_map_api_key}"
 RUNTIME_SA_NAME="${RUNTIME_SA_NAME:-bridge-map-agent-sa}"
 MODEL="${MODEL:-gemini-3.5-flash}"
-BRIDGE_BIGQUERY_TABLE="${BRIDGE_BIGQUERY_TABLE:-us-con-gcp-sbx-dep0049-081624.bridge_inventory.bridge_data}"
+BRIDGE_BIGQUERY_TABLE="${BRIDGE_BIGQUERY_TABLE:-your-project-id.transportation.bridge_data}"
 BRIDGE_DATA_PROJECT="${BRIDGE_DATA_PROJECT:-${BRIDGE_BIGQUERY_TABLE%%.*}}"
 BIGQUERY_LOCATION="${BIGQUERY_LOCATION:-}"
 

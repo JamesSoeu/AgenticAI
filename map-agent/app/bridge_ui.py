@@ -38,9 +38,9 @@ def _component_ids(bridges: list[dict], include_map: bool) -> list[str]:
 
 
 def _build_v08(
-    bridges: list[dict], map_embed_path: str | None, surface_id: str
+    bridges: list[dict], map_data: dict | None, surface_id: str
 ) -> list[dict]:
-    component_ids = _component_ids(bridges, bool(map_embed_path))
+    component_ids = _component_ids(bridges, bool(map_data))
     components = [
         {
             "id": "root-column",
@@ -73,12 +73,14 @@ def _build_v08(
             },
         },
     ]
-    if map_embed_path:
+    if map_data:
         components.append(
             {
                 "id": "map-frame",
                 "component": {
-                    "WebFrameUrl": {"url": {"literalString": map_embed_path}}
+                    "WebFrameUrl": {
+                        "url": {"literalString": map_data["frame_url"]}
+                    }
                 },
             }
         )
@@ -122,11 +124,11 @@ def _build_v08(
 
 def _build_v09(
     bridges: list[dict],
-    map_embed_path: str | None,
+    map_data: dict | None,
     surface_id: str,
     catalog_id: str,
 ) -> list[dict]:
-    component_ids = _component_ids(bridges, bool(map_embed_path))
+    component_ids = _component_ids(bridges, bool(map_data))
     components = [
         {
             "id": "root",
@@ -147,12 +149,12 @@ def _build_v09(
             "text": f"Found {len(bridges)} matching bridges.",
         },
     ]
-    if map_embed_path:
+    if map_data:
         components.append(
             {
                 "id": "map-frame",
                 "component": "WebFrameUrl",
-                "url": map_embed_path,
+                "url": map_data["frame_url"],
             }
         )
 
@@ -195,7 +197,7 @@ def _build_v09(
 
 def build_bridge_a2ui(
     bridges: list[dict],
-    map_embed_path: str | None,
+    map_data: dict | None,
     *,
     version: str | None = None,
     catalog_id: str | None = None,
@@ -205,8 +207,8 @@ def build_bridge_a2ui(
     if version == VERSION_0_9:
         return _build_v09(
             bridges,
-            map_embed_path,
+            map_data,
             surface_id,
             catalog_id or DEFAULT_V09_CATALOG_ID,
         )
-    return _build_v08(bridges, map_embed_path, surface_id)
+    return _build_v08(bridges, map_data, surface_id)

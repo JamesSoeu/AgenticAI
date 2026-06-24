@@ -13,7 +13,9 @@ class RouterSettings:
     router_name: str
     router_public_url: str | None
     data_agent_url: str
+    data_agent_audience: str | None
     map_agent_url: str
+    map_agent_audience: str | None
     default_agent: str
     classifier_min_confidence: float
     request_timeout_seconds: float
@@ -30,7 +32,9 @@ def load_settings() -> RouterSettings:
         router_name=os.getenv("ROUTER_NAME", "Transportation Orchestrator Agent").strip(),
         router_public_url=os.getenv("ROUTER_PUBLIC_URL", "").strip() or None,
         data_agent_url=_normalize_base_url(os.getenv("DATA_AGENT_URL", "")),
+        data_agent_audience=_normalize_optional_url(os.getenv("DATA_AGENT_AUDIENCE", "")),
         map_agent_url=_normalize_base_url(os.getenv("MAP_AGENT_URL", "")),
+        map_agent_audience=_normalize_optional_url(os.getenv("MAP_AGENT_AUDIENCE", "")),
         default_agent=os.getenv("ROUTER_DEFAULT_AGENT", "data").strip().lower(),
         classifier_min_confidence=float(os.getenv("ROUTER_CLASSIFIER_MIN_CONFIDENCE", "0.65")),
         request_timeout_seconds=float(os.getenv("ROUTER_REQUEST_TIMEOUT_SECONDS", "120")),
@@ -46,6 +50,10 @@ def _normalize_base_url(raw: str) -> str:
     if not url.startswith(("http://", "https://")):
         raise ValueError(f"Agent URL must start with http:// or https://: {url}")
     return url
+
+
+def _normalize_optional_url(raw: str) -> str | None:
+    return _normalize_base_url(raw) or None
 
 
 def _parse_bool(raw: str) -> bool:

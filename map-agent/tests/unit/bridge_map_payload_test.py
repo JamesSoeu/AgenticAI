@@ -8,10 +8,22 @@ from app.bridge_ui import build_bridge_a2ui
 
 
 ROOT = Path(__file__).parents[2]
-EXPECTED_QUERY = (
-    "/maps/embed?mode=directions&origin=38.9351%2C-83.4596"
-    "&destination=38.9451%2C-83.4696"
-)
+EXPECTED_MAP = {
+    "center": {"lat": 38.9351, "lng": -83.4596},
+    "zoom": 14,
+    "frame_url": "http://localhost:8000/bridge-map?data=example",
+    "pins": [
+        {
+            "lat": 38.9351,
+            "lng": -83.4596,
+            "name": "Bridge 1: SFN 1",
+            "description": (
+                "Route: SR-1 | Feature: Creek | "
+                "Location: Location | County: 001"
+            ),
+        }
+    ],
+}
 
 
 def _load(version: str) -> list[dict]:
@@ -33,13 +45,16 @@ def test_gemini_enterprise_v08_payload_has_bridge_details_and_map():
     component_text = str(components)
 
     assert messages[0]["beginRendering"]["surfaceId"] == "bridge-results-view"
-    assert frame["component"]["WebFrameUrl"]["url"]["literalString"] == EXPECTED_QUERY
+    assert frame["component"]["WebFrameUrl"]["url"]["literalString"].startswith(
+        "/bridge-map?data="
+    )
     assert "Structure ID (SFN)" in component_text
     assert "Route code" in component_text
     assert "Feature crossed" in component_text
     assert "County code" in component_text
     assert "Coordinates" in component_text
     assert component_text.count("WebFrameUrl") == 1
+    assert "directions" not in component_text
     assert "Bridge 2" in component_text
 
 
@@ -50,13 +65,15 @@ def test_local_v09_payload_has_bridge_details_and_map():
     component_text = str(components)
 
     assert messages[0]["createSurface"]["surfaceId"] == "bridge-results-view"
-    assert frame["url"] == EXPECTED_QUERY
+    assert frame["component"] == "WebFrameUrl"
+    assert frame["url"].startswith("/bridge-map?data=")
     assert "Structure ID (SFN)" in component_text
     assert "Route code" in component_text
     assert "Feature crossed" in component_text
     assert "County code" in component_text
     assert "Coordinates" in component_text
     assert sum(item.get("component") == "WebFrameUrl" for item in components) == 1
+    assert "directions" not in component_text
     assert "Bridge 2" in component_text
 
 
@@ -79,7 +96,7 @@ def test_deterministic_payloads_validate_for_both_supported_versions():
         catalog = manager.get_selected_catalog()
         messages = build_bridge_a2ui(
             bridges,
-            "/maps/embed?mode=place&q=38.9351%2C-83.4596",
+            EXPECTED_MAP,
             version=version,
             catalog_id=catalog.catalog_id,
         )

@@ -1,14 +1,20 @@
 """Read-only BigQuery tools for searching bridge inventory records."""
 
+import base64
+import json
 import logging
 import re
-from urllib.parse import urlencode
 
 from google.cloud import bigquery
 from google.adk.tools.tool_context import ToolContext
 
 from app.bridge_ui import build_bridge_a2ui
-from app.config import BIGQUERY_JOB_PROJECT, BIGQUERY_LOCATION, BRIDGE_BIGQUERY_TABLE
+from app.config import (
+    AGENT_URL,
+    BIGQUERY_JOB_PROJECT,
+    BIGQUERY_LOCATION,
+    BRIDGE_BIGQUERY_TABLE,
+)
 from app.session_keys import A2UI_CATALOG_KEY
 
 logger = logging.getLogger(__name__)
@@ -46,26 +52,80 @@ def _row_to_bridge(row) -> dict:
     }
 
 
-def _build_all_bridges_map_embed_path(bridges: list[dict]) -> str | None:
-    """Build one Google Maps Embed path containing every valid bridge coordinate."""
+def _clean_map_text(value) -> str:
+    return "Not available" if value in (None, "") else str(value)
+
+
+def _pin_description(bridge: dict) -> str:
+    return " | ".join(
+        (
+            f"Route: {_clean_map_text(bridge.get('route_code'))}",
+            f"Feature: {_clean_map_text(bridge.get('feature_crossed'))}",
+            f"Location: {_clean_map_text(bridge.get('location'))}",
+            f"County: {_clean_map_text(bridge.get('county_code'))}",
+        )
+    )
+
+
+def _zoom_for_coordinates(coordinates: list[tuple[float, float]]) -> int:
+    if len(coordinates) <= 1:
+        return 14
+
+    latitudes = [latitude for latitude, _ in coordinates]
+    longitudes = [longitude for _, longitude in coordinates]
+    spread = max(max(latitudes) - min(latitudes), max(longitudes) - min(longitudes))
+    if spread > 1.0:
+        return 7
+    if spread > 0.5:
+        return 8
+    if spread > 0.2:
+        return 9
+    if spread > 0.08:
+        return 10
+    return 11
+
+
+def _build_all_bridges_map(bridges: list[dict]) -> dict | None:
+    """Build map center/zoom/pin data without turning assets into a route."""
     coordinates = [
-        f"{bridge['latitude']},{bridge['longitude']}"
+        (float(bridge["latitude"]), float(bridge["longitude"]), bridge)
         for bridge in bridges
         if bridge.get("latitude") is not None and bridge.get("longitude") is not None
     ]
     if not coordinates:
         return None
-    if len(coordinates) == 1:
-        return f"/maps/embed?{urlencode({'mode': 'place', 'q': coordinates[0]})}"
 
-    params = {
-        "mode": "directions",
-        "origin": coordinates[0],
-        "destination": coordinates[-1],
+    coordinate_pairs = [(latitude, longitude) for latitude, longitude, _ in coordinates]
+    center = {
+        "lat": round(
+            sum(latitude for latitude, _, _ in coordinates) / len(coordinates), 6
+        ),
+        "lng": round(
+            sum(longitude for _, longitude, _ in coordinates) / len(coordinates), 6
+        ),
     }
-    if len(coordinates) > 2:
-        params["waypoints"] = "|".join(coordinates[1:-1])
-    return f"/maps/embed?{urlencode(params)}"
+    pins = []
+    for index, (latitude, longitude, bridge) in enumerate(coordinates, start=1):
+        structure_id = _clean_map_text(bridge.get("structure_id"))
+        pins.append(
+            {
+                "lat": latitude,
+                "lng": longitude,
+                "name": f"Bridge {index}: SFN {structure_id}",
+                "description": _pin_description(bridge),
+            }
+        )
+
+    map_data = {
+        "center": center,
+        "zoom": _zoom_for_coordinates(coordinate_pairs),
+        "pins": pins,
+    }
+    encoded = base64.urlsafe_b64encode(
+        json.dumps(map_data, separators=(",", ":")).encode("utf-8")
+    ).decode("ascii").rstrip("=")
+    map_data["frame_url"] = f"{AGENT_URL.rstrip('/')}/bridge-map?data={encoded}"
+    return map_data
 
 
 def search_bridges(
@@ -96,7 +156,7 @@ def search_bridges(
             all returned bridges can be displayed together on the map.
 
     Returns:
-        A dictionary containing matching bridge records and one combined map path.
+        A dictionary containing matching bridge records and one combined map.
     """
     try:
         limit = max(1, min(int(limit), 10))
@@ -182,11 +242,12 @@ LIMIT @limit
             "table": BRIDGE_BIGQUERY_TABLE,
             "count": len(bridges),
             "bridges": bridges,
-            "all_bridges_map_embed_path": _build_all_bridges_map_embed_path(bridges),
+            "all_bridges_map": _build_all_bridges_map(bridges),
             "display_guidance": (
                 "Display every returned key column for each bridge. "
-                "Use all_bridges_map_embed_path once to show all returned bridges "
-                "on the same Google Map."
+                "Use all_bridges_map once to show every returned bridge as pins "
+                "on the same Google Map. Do not create a directions route between "
+                "multiple bridge locations."
             ),
         }
         if bridges and tool_context is not None:
@@ -195,7 +256,7 @@ LIMIT @limit
             version = getattr(catalog, "version", None)
             result["validated_a2ui_json"] = build_bridge_a2ui(
                 bridges,
-                result["all_bridges_map_embed_path"],
+                result["all_bridges_map"],
                 version=version,
                 catalog_id=catalog_id,
             )

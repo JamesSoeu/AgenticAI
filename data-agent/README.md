@@ -27,7 +27,7 @@ notepad cloudrun-env.yaml
 gcloud run deploy ge-data-a2a-agent `
   --source . `
   --region us-central1 `
-  --project us-con-gcp-sbx-dep0049-081624 `
+  --project YOUR_PROJECT_ID `
   --allow-unauthenticated `
   --env-vars-file cloudrun-env.yaml
 ```

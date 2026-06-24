@@ -105,7 +105,7 @@ From the repository root:
 ```powershell
 gcloud auth login
 gcloud auth application-default login
-gcloud config set project us-con-gcp-sbx-dep0049-081624
+gcloud config set project YOUR_PROJECT_ID
 ```
 
 Deploy the data agent:
@@ -117,7 +117,7 @@ notepad cloudrun-env.yaml
 gcloud run deploy ge-data-a2a-agent `
   --source . `
   --region us-central1 `
-  --project us-con-gcp-sbx-dep0049-081624 `
+  --project YOUR_PROJECT_ID `
   --allow-unauthenticated `
   --env-vars-file cloudrun-env.yaml
 Pop-Location
@@ -127,10 +127,10 @@ Deploy the map agent:
 
 ```powershell
 Push-Location map-agent
-gcloud services enable secretmanager.googleapis.com maps-embed-backend.googleapis.com --project us-con-gcp-sbx-dep0049-081624
-.\scripts\set_maps_secret.ps1 -ProjectId us-con-gcp-sbx-dep0049-081624 -MapsApiKey "YOUR_MAPS_API_KEY"
+gcloud services enable secretmanager.googleapis.com maps-embed-backend.googleapis.com --project YOUR_PROJECT_ID
+.\scripts\set_maps_secret.ps1 -ProjectId YOUR_PROJECT_ID -MapsApiKey "YOUR_MAPS_API_KEY"
 .\scripts\deploy_cloud_run.ps1 `
-  -ProjectId us-con-gcp-sbx-dep0049-081624 `
+  -ProjectId YOUR_PROJECT_ID `
   -Region us-central1 `
   -ServiceName ge-map-a2a-agent `
   -Model gemini-3.5-flash
@@ -146,7 +146,7 @@ notepad cloudrun-env.yaml
 gcloud run deploy ge-transport-router-agent `
   --source . `
   --region us-central1 `
-  --project us-con-gcp-sbx-dep0049-081624 `
+  --project YOUR_PROJECT_ID `
   --allow-unauthenticated `
   --env-vars-file cloudrun-env.yaml
 Pop-Location
@@ -155,7 +155,7 @@ Pop-Location
 Before deploying the router, confirm `router-agent/cloudrun-env.yaml` includes:
 
 ```yaml
-GOOGLE_CLOUD_PROJECT: "us-con-gcp-sbx-dep0049-081624"
+GOOGLE_CLOUD_PROJECT: "YOUR_PROJECT_ID"
 GOOGLE_CLOUD_LOCATION: "global"
 GOOGLE_GENAI_USE_VERTEXAI: "true"
 ROUTER_MODEL: "gemini-3.5-flash"
@@ -167,7 +167,7 @@ After the router deploys, get its URL:
 ```powershell
 gcloud run services describe ge-transport-router-agent `
   --region us-central1 `
-  --project us-con-gcp-sbx-dep0049-081624 `
+  --project YOUR_PROJECT_ID `
   --format="value(status.url)"
 ```
 

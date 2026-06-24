@@ -6,6 +6,7 @@ from unittest.mock import patch
 from orchestrator_router.card import build_agent_card
 from orchestrator_router.classifier import classify_route, parse_classifier_response
 from orchestrator_router.config import RouterSettings
+from orchestrator_router.auth import target_audience
 from orchestrator_router.routing import extract_text
 
 
@@ -68,13 +69,43 @@ class RouterTests(unittest.TestCase):
         self.assertIn("capabilities", card)
         self.assertIn("skills", card)
 
+    def test_target_audience_defaults_to_target_base_url(self):
+        settings = _settings(use_id_token=True)
 
-def _settings() -> RouterSettings:
+        audience = target_audience("data", "https://data.example.com", settings)
+
+        self.assertEqual(audience, "https://data.example.com")
+
+    def test_target_audience_uses_per_agent_override(self):
+        settings = _settings(
+            use_id_token=True,
+            data_agent_audience="https://data-cloud-run.example.com",
+            map_agent_audience="https://map-cloud-run.example.com",
+        )
+
+        self.assertEqual(
+            target_audience("data", "https://proxy.example.com/data", settings),
+            "https://data-cloud-run.example.com",
+        )
+        self.assertEqual(
+            target_audience("map", "https://proxy.example.com/map", settings),
+            "https://map-cloud-run.example.com",
+        )
+
+
+def _settings(
+    *,
+    use_id_token: bool = False,
+    data_agent_audience: str | None = None,
+    map_agent_audience: str | None = None,
+) -> RouterSettings:
     return RouterSettings(
         router_name="Transportation Orchestrator Agent",
         router_public_url="https://router.example.com",
         data_agent_url="https://data.example.com",
+        data_agent_audience=data_agent_audience,
         map_agent_url="https://map.example.com",
+        map_agent_audience=map_agent_audience,
         default_agent="data",
         google_cloud_project="project-id",
         google_cloud_location="global",
@@ -82,7 +113,7 @@ def _settings() -> RouterSettings:
         router_model="gemini-3.5-flash",
         classifier_min_confidence=0.65,
         request_timeout_seconds=120,
-        use_id_token=False,
+        use_id_token=use_id_token,
         port=8080,
     )
 

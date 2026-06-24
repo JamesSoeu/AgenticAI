@@ -1,0 +1,25 @@
+param(
+    [string]$Path = ".env"
+)
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = "Stop"
+
+if (-not (Test-Path $Path)) {
+    throw "Environment file not found: $Path. Copy .env.example to .env first."
+}
+
+Get-Content $Path | ForEach-Object {
+    $line = $_.Trim()
+    if ($line -and -not $line.StartsWith("#")) {
+        $separator = $line.IndexOf("=")
+        if ($separator -lt 1) {
+            return
+        }
+
+        $name = $line.Substring(0, $separator).Trim()
+        $value = $line.Substring($separator + 1).Trim()
+        $value = $value.Trim('"').Trim("'")
+        [Environment]::SetEnvironmentVariable($name, $value, "Process")
+    }
+}

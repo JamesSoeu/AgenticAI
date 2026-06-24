@@ -234,7 +234,7 @@ def _agent_card():
                 "Find road segments with high crash counts and available traffic volume data.",
                 "Summarize traffic count trends by route or station.",
                 "Search the bridge inspection PDF manuals for inspection responsibility.",
-                "List source files in the mio-poc bucket and summarize a relevant PDF or text file.",
+                "List source files in the YOUR_BUCKET_NAME bucket and summarize a relevant PDF or text file.",
             ],
         )
 

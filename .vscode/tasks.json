@@ -1,0 +1,81 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "A2A: install dependencies",
+      "type": "shell",
+      "command": "py -3.12 -m venv .venv; .\\.venv\\Scripts\\python.exe -m pip install --upgrade pip; .\\.venv\\Scripts\\pip.exe install -r requirements.txt",
+      "windows": {
+        "options": {
+          "shell": {
+            "executable": "powershell.exe",
+            "args": [
+              "-NoProfile",
+              "-ExecutionPolicy",
+              "Bypass",
+              "-Command"
+            ]
+          }
+        }
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "A2A: run local server",
+      "type": "shell",
+      "command": ".\\scripts\\run-local.ps1",
+      "windows": {
+        "options": {
+          "shell": {
+            "executable": "powershell.exe",
+            "args": [
+              "-NoProfile",
+              "-ExecutionPolicy",
+              "Bypass",
+              "-Command"
+            ]
+          }
+        }
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "A2A: run tests",
+      "type": "shell",
+      "command": ".\\.venv\\Scripts\\python.exe -m unittest discover -s tests",
+      "windows": {
+        "options": {
+          "shell": {
+            "executable": "powershell.exe",
+            "args": [
+              "-NoProfile",
+              "-ExecutionPolicy",
+              "Bypass",
+              "-Command"
+            ]
+          }
+        }
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "A2A: deploy Cloud Run",
+      "type": "shell",
+      "command": ".\\scripts\\deploy-cloud-run.ps1",
+      "windows": {
+        "options": {
+          "shell": {
+            "executable": "powershell.exe",
+            "args": [
+              "-NoProfile",
+              "-ExecutionPolicy",
+              "Bypass",
+              "-Command"
+            ]
+          }
+        }
+      },
+      "problemMatcher": []
+    }
+  ]
+}
