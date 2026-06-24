@@ -57,3 +57,13 @@ roles/aiplatform.user
 For Private Cloud Run Testing / Token Generation
 If you want to impersonate service accounts and test private Cloud Run:
 roles/iam.serviceAccountTokenCreator
+
+
+Important Security Note
+The powerful role is:
+roles/resourcemanager.projectIamAdmin
+That lets you grant IAM permissions on the project. Some infra teams may not approve it because it is broad. If they do not approve it, ask for a compromise:
+roles/iam.serviceAccountAdmin
+roles/iam.serviceAccountUser
+roles/run.admin
+roles/serviceusage.serviceUsageAdmin
