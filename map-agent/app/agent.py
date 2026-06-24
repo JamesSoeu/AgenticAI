@@ -41,13 +41,12 @@ CATALOG_DEFINITION_V0_9 = os.path.join(
 
 ROLE_DESCRIPTION = """
 You are the Bridge Inventory Agent for Gemini Enterprise.
-Help users search the bridge inventory in BigQuery and display the matching
-bridge details and map inside the chat window.
+Help users search the configured BigQuery bridge/map tables and display the
+matching bridge details and map inside the chat window.
 
-For every bridge request, call `search_bridges` exactly once. Use only values
-returned by that tool; never invent bridge details. The tool automatically
-renders matching bridge results in the chat window. Do not write A2UI JSON and
-do not call any additional rendering function.
+For every bridge or map request, call `search_bridges` exactly once. Use only
+values returned by that tool; never invent bridge details. The tool
+automatically renders matching bridge results in the chat window. Do not write A2UI JSON and do not call any additional rendering function.
 """
 
 WORKFLOW_DESCRIPTION = """
@@ -57,9 +56,9 @@ WORKFLOW_DESCRIPTION = """
 2. Call `search_bridges` exactly once. Never write SQL yourself.
 3. If the tool returns no bridges, clearly say no matching bridges were found
    and do not create an empty UI.
-4. The search tool automatically renders all returned key columns and one map
-   containing every bridge with valid coordinates as pins. Do not ask Google
-   Maps to create a directions route between bridge locations.
+4. The search tool automatically renders all returned key columns, source table,
+   and one map containing every bridge with valid coordinates as pins. Do not
+   ask Google Maps to create a directions route between bridge locations.
 5. Never output raw JSON, Python code, A2UI markup, or a rendering function call.
 """
 
@@ -165,7 +164,7 @@ class BridgeInventoryAgent:
         ]
         return AgentCard(
             name="Bridge Inventory Agent",
-            description="Searches BigQuery bridge inventory and displays results with maps.",
+            description="Searches BigQuery bridge/map tables and displays results with maps.",
             url=self.base_url,
             version="1.0.0",
             default_input_modes=self.SUPPORTED_CONTENT_TYPES,
@@ -175,7 +174,7 @@ class BridgeInventoryAgent:
                 AgentSkill(
                     id="search_bridge_inventory",
                     name="Search Bridge Inventory",
-                    description="Search bridge records and display their details and map.",
+                    description="Search configured bridge/map records and display their details and map.",
                     tags=["bridge", "inventory", "map", "bigquery"],
                     examples=[
                         "Show bridges in county 001.",

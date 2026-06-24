@@ -64,8 +64,8 @@
   <text class="small" x="1090" y="432">Cloud Run service</text>
   <text class="small" x="1090" y="454">Bridge inventory lookup</text>
   <text class="small" x="1090" y="476">A2UI WebFrameUrl</text>
-  <text class="small" x="1090" y="498">/bridge-map with pins</text>
-  <text class="small" x="1090" y="520">No directions route</text>
+  <text class="small" x="1090" y="498">Maps Embed iframe</text>
+  <text class="small" x="1090" y="520">Centered view, no route</text>
   <text class="tiny" x="1090" y="548">Folder: map-agent/</text>
 
   <path class="arrow" d="M300 276 H370"/>

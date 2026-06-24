@@ -5,16 +5,18 @@ Backend-only A2A/A2UI Cloud Run service for bridge inventory map questions.
 It handles:
 
 - Bridge search from BigQuery
+- Up to three configured BigQuery map/search tables with the same bridge
+  location schema
 - A2UI response creation for Gemini Enterprise
-- WebFrameUrl map responses for Gemini Enterprise
-- Cloud Run-hosted interactive Google Maps JavaScript page with bridge pins,
-  not directions routes
+- WebFrameUrl map responses for Gemini Enterprise using Google Maps Embed API
 - Google Maps Embed URL proxying through `/maps/embed` for compatibility links
 
 There is no separate frontend folder in this monorepo version. Gemini Enterprise
-is the client that renders the A2UI `WebFrameUrl` response. Multiple bridge
-results are displayed as pins on one map so the user can inspect assets without
-seeing a route, origin, destination, or waypoint list.
+is the client that renders the A2UI `WebFrameUrl` response. The map iframe uses
+Google Maps Embed API directly because Gemini Enterprise can block custom HTML
+and JavaScript. Multiple bridge results are listed below the map; the iframe
+uses a centered map view instead of custom JavaScript pins or a directions
+route.
 
 ## Configure
 
@@ -32,9 +34,29 @@ GOOGLE_CLOUD_PROJECT: "YOUR_PROJECT_ID"
 GOOGLE_CLOUD_LOCATION: "global"
 MODEL: "gemini-3.5-flash"
 AGENT_URL: "https://YOUR-MAP-AGENT-URL.run.app"
-BRIDGE_BIGQUERY_TABLE: "your-project-id.transportation.bridge_data"
+BRIDGE_BIGQUERY_TABLES: "YOUR_PROJECT_ID.transportation.bridge_data,YOUR_PROJECT_ID.transportation.crash_data,YOUR_PROJECT_ID.transportation.traffic_data"
 BIGQUERY_JOB_PROJECT: "YOUR_PROJECT_ID"
 GOOGLE_MAPS_SECRET_NAME: "google_map_api_key"
+```
+
+`BRIDGE_BIGQUERY_TABLES` accepts one to three comma-separated BigQuery table IDs.
+Each table must provide these columns because the map agent unions them into one
+map/search result set:
+
+```text
+LATITUDE_DD
+LONGITUDE_DD
+INVENT_FEAT
+RTE_ON_BRG_CD
+SFN
+STR_LOC
+COUNTY_CD
+```
+
+The old single-table setting still works:
+
+```yaml
+BRIDGE_BIGQUERY_TABLE: "YOUR_PROJECT_ID.transportation.bridge_data"
 ```
 
 ## Local Run
@@ -53,11 +75,10 @@ curl.exe http://localhost:8000/.well-known/agent-card.json
 ## Google Maps Secret
 
 Create or update the Google Maps API key secret. The key must allow the Maps
-JavaScript API for `/bridge-map` and Maps Embed API for the compatibility
-`/maps/embed` endpoint:
+Embed API:
 
 ```powershell
-gcloud services enable secretmanager.googleapis.com maps-backend.googleapis.com maps-embed-backend.googleapis.com --project YOUR_PROJECT_ID
+gcloud services enable secretmanager.googleapis.com maps-embed-backend.googleapis.com --project YOUR_PROJECT_ID
 
 .\scripts\set_maps_secret.ps1 `
   -ProjectId YOUR_PROJECT_ID `
@@ -94,8 +115,7 @@ Where is this bridge located?
 
 ## Key Files
 
-- `app/main.py`: A2A Starlette application, `/bridge-map` pin map page, and
-  `/maps/embed` compatibility proxy.
+- `app/main.py`: A2A Starlette application and `/maps/embed` compatibility proxy.
 - `app/agent.py`: ADK bridge inventory agent and agent card.
 - `app/agent_executor.py`: Converts ADK events into A2A/A2UI responses.
 - `app/bridge_tools.py`: BigQuery bridge search tool.

@@ -32,9 +32,9 @@ flowchart LR
     data -- SQL/document reasoning --> vertex
 
     map -- bridge inventory lookup --> bq
-    map -- WebFrameUrl /bridge-map with pins --> ge
-    map -- Maps JavaScript API key --> sm
-    map -- browser map tiles and markers --> maps
+    map -- WebFrameUrl Google Maps Embed iframe --> ge
+    map -- Maps Embed API key --> sm
+    map -- embed map tiles and centered views --> maps
     map -- optional map reasoning --> vertex
 
     router --> logs
@@ -48,7 +48,7 @@ flowchart LR
 | --- | --- | --- | --- |
 | Router agent | `router-agent/` | Single front door imported into Gemini Enterprise | A2A server, ADK agent, LLM classifier, remote A2A calls to specialist agents |
 | Data agent | `data-agent/` | Data and document Q&A | BigQuery tables, Cloud Storage bucket, PDF/text reading, SQL generation controls |
-| Map agent | `map-agent/` | Bridge map and location Q&A | BigQuery bridge inventory, A2UI `WebFrameUrl`, Cloud Run `/bridge-map`, Google Maps JavaScript pins |
+| Map agent | `map-agent/` | Bridge map and location Q&A | BigQuery bridge inventory, A2UI `WebFrameUrl`, Google Maps Embed iframe |
 
 ## Runtime Flow
 
@@ -64,7 +64,8 @@ flowchart LR
    needed.
 6. Specialist response returns through the router to Gemini Enterprise.
 7. Gemini Enterprise renders the answer. For map results, it renders a
-   `WebFrameUrl` that loads the map-agent `/bridge-map` page with bridge pins.
+   `WebFrameUrl` that points to a Google Maps Embed iframe. Multiple returned
+   bridges are listed below the map while the iframe shows a centered map view.
 
 ## Feature Matrix
 
@@ -106,9 +107,9 @@ want-to-create-a-a2a-adk/
   map-agent/
     app/
       agent.py              # Bridge inventory ADK agent
-      bridge_tools.py       # BigQuery bridge search and map pin data
+      bridge_tools.py       # BigQuery bridge search and embed map data
       bridge_ui.py          # A2UI WebFrameUrl payload builder
-      main.py               # A2A app plus /bridge-map map page
+      main.py               # A2A app plus /maps/embed compatibility proxy
     cloudrun-env.example.yaml
     scripts/
 ```
@@ -145,4 +146,3 @@ flowchart TB
 
 This structure gives clean separation at runtime while keeping development in
 one repo. Each Cloud Run service can scale, log, deploy, and fail independently.
-

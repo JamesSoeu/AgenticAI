@@ -6,7 +6,7 @@ param(
     [string]$MapsSecret = $(if ($env:GOOGLE_MAPS_SECRET_NAME) { $env:GOOGLE_MAPS_SECRET_NAME } else { "google_map_api_key" }),
     [string]$RuntimeServiceAccountName = $(if ($env:RUNTIME_SA_NAME) { $env:RUNTIME_SA_NAME } else { "bridge-map-agent-sa" }),
     [string]$Model = $(if ($env:MODEL) { $env:MODEL } else { "gemini-3.5-flash" }),
-    [string]$BridgeBigQueryTable = $(if ($env:BRIDGE_BIGQUERY_TABLE) { $env:BRIDGE_BIGQUERY_TABLE } else { "your-project-id.transportation.bridge_data" }),
+    [string]$BridgeBigQueryTables = $(if ($env:BRIDGE_BIGQUERY_TABLES) { $env:BRIDGE_BIGQUERY_TABLES } elseif ($env:BRIDGE_BIGQUERY_TABLE) { $env:BRIDGE_BIGQUERY_TABLE } else { "your-project-id.transportation.bridge_data" }),
     [string]$BridgeDataProject = $env:BRIDGE_DATA_PROJECT,
     [string]$BigQueryLocation = $env:BIGQUERY_LOCATION
 )
@@ -34,7 +34,8 @@ if (-not $ProjectId -or $ProjectId -eq "(unset)") {
     throw "Set -ProjectId, `$env:PROJECT_ID, or run: gcloud config set project YOUR_PROJECT_ID"
 }
 if (-not $BridgeDataProject) {
-    $BridgeDataProject = $BridgeBigQueryTable.Split(".")[0]
+    $FirstBridgeBigQueryTable = $BridgeBigQueryTables.Split(",")[0].Trim()
+    $BridgeDataProject = $FirstBridgeBigQueryTable.Split(".")[0]
 }
 
 $ProjectNumber = (& gcloud projects describe $ProjectId --format="value(projectNumber)").Trim()
@@ -105,7 +106,7 @@ $EnvironmentVariables = @(
     "GOOGLE_CLOUD_LOCATION=global"
     "GOOGLE_GENAI_USE_VERTEXAI=true"
     "MODEL=$Model"
-    "BRIDGE_BIGQUERY_TABLE=$BridgeBigQueryTable"
+    "BRIDGE_BIGQUERY_TABLES=$BridgeBigQueryTables"
     "BIGQUERY_JOB_PROJECT=$ProjectId"
     "BIGQUERY_LOCATION=$BigQueryLocation"
 ) -join ","

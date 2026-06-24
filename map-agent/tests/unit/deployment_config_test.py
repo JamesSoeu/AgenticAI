@@ -14,7 +14,7 @@ def test_cloud_run_deploy_binds_maps_secret_and_gemini_enterprise_invoker():
     assert "gcp-sa-discoveryengine.iam.gserviceaccount.com" in script
     assert 'roles/bigquery.jobUser' in script
     assert 'roles/bigquery.dataViewer' in script
-    assert 'BRIDGE_BIGQUERY_TABLE=${BRIDGE_BIGQUERY_TABLE}' in script
+    assert 'BRIDGE_BIGQUERY_TABLES=${BRIDGE_BIGQUERY_TABLES}' in script
     assert 'AGENT_URL=${SERVICE_URL}' in script
 
 
@@ -33,7 +33,7 @@ def test_powershell_deploy_matches_cloud_run_contract():
     assert "roles/bigquery.jobUser" in script
     assert "roles/bigquery.dataViewer" in script
     assert "gcp-sa-discoveryengine.iam.gserviceaccount.com" in script
-    assert "BRIDGE_BIGQUERY_TABLE=$BridgeBigQueryTable" in script
+    assert "BRIDGE_BIGQUERY_TABLES=$BridgeBigQueryTables" in script
 
 
 def test_powershell_verify_and_registration_scripts_exist():

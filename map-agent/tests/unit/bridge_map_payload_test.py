@@ -11,7 +11,8 @@ ROOT = Path(__file__).parents[2]
 EXPECTED_MAP = {
     "center": {"lat": 38.9351, "lng": -83.4596},
     "zoom": 14,
-    "frame_url": "http://localhost:8000/bridge-map?data=example",
+    "frame_url": "https://www.google.com/maps/embed/v1/place?key=EXAMPLE_MAPS_KEY&q=38.9351%2C-83.4596",
+    "map_mode": "place",
     "pins": [
         {
             "lat": 38.9351,
@@ -46,7 +47,7 @@ def test_gemini_enterprise_v08_payload_has_bridge_details_and_map():
 
     assert messages[0]["beginRendering"]["surfaceId"] == "bridge-results-view"
     assert frame["component"]["WebFrameUrl"]["url"]["literalString"].startswith(
-        "/bridge-map?data="
+        "https://www.google.com/maps/embed/v1/"
     )
     assert "Structure ID (SFN)" in component_text
     assert "Route code" in component_text
@@ -66,7 +67,7 @@ def test_local_v09_payload_has_bridge_details_and_map():
 
     assert messages[0]["createSurface"]["surfaceId"] == "bridge-results-view"
     assert frame["component"] == "WebFrameUrl"
-    assert frame["url"].startswith("/bridge-map?data=")
+    assert frame["url"].startswith("https://www.google.com/maps/embed/v1/")
     assert "Structure ID (SFN)" in component_text
     assert "Route code" in component_text
     assert "Feature crossed" in component_text

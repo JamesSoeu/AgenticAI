@@ -62,6 +62,30 @@ BRIDGE_BIGQUERY_TABLE: str = os.getenv(
     "BRIDGE_BIGQUERY_TABLE",
     "your-project-id.transportation.bridge_data",
 )
+BRIDGE_BIGQUERY_TABLES: tuple[str, ...] = ()
+
+
+def _parse_table_list(raw: str) -> tuple[str, ...]:
+    """Parse one to three comma-separated BigQuery table IDs.
+
+    Accepts accidental pasted values such as
+    ``BIGQUERY_TABLES=project.dataset.table,...`` so deployment config errors
+    are easier to recover from.
+    """
+    value = raw.strip().strip('"').strip("'")
+    if "=" in value and value.split("=", maxsplit=1)[0].strip().endswith("TABLES"):
+        value = value.split("=", maxsplit=1)[1]
+    tables = tuple(table.strip() for table in value.split(",") if table.strip())
+    return tables[:3]
+
+
+BRIDGE_BIGQUERY_TABLES = _parse_table_list(
+    os.getenv("BRIDGE_BIGQUERY_TABLES")
+    or os.getenv("MAP_BIGQUERY_TABLES")
+    or os.getenv("BIGQUERY_TABLES")
+    or BRIDGE_BIGQUERY_TABLE
+)
+BRIDGE_BIGQUERY_TABLE = BRIDGE_BIGQUERY_TABLES[0] if BRIDGE_BIGQUERY_TABLES else BRIDGE_BIGQUERY_TABLE
 BIGQUERY_JOB_PROJECT: str = os.getenv(
     "BIGQUERY_JOB_PROJECT",
     GOOGLE_CLOUD_PROJECT or BRIDGE_BIGQUERY_TABLE.split(".", maxsplit=1)[0],
@@ -148,6 +172,8 @@ def extract_json_from_llm_response(text: str) -> str:
 def build_maps_embed_url(
     *,
     query: str | None = None,
+    center: str | None = None,
+    zoom: int | None = None,
     origin: str | None = None,
     destination: str | None = None,
 ) -> str | None:
@@ -166,6 +192,11 @@ def build_maps_embed_url(
             f"{base}/directions?key={api_key}"
             f"&origin={quote(origin)}&destination={quote(destination)}"
         )
+    if center:
+        url = f"{base}/view?key={api_key}&center={quote(center)}"
+        if zoom is not None:
+            url += f"&zoom={max(1, min(int(zoom), 21))}"
+        return url
     if query:
         return f"{base}/place?key={api_key}&q={quote(query)}"
     return None

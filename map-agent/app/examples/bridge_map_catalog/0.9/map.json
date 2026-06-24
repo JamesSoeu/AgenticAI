@@ -52,7 +52,7 @@
         {
           "id": "map-frame",
           "component": "WebFrameUrl",
-          "url": "/bridge-map?data=eyJjZW50ZXIiOnsibGF0IjozOC45NDAxLCJsbmciOi04My40NjQ2fSwiem9vbSI6MTEsInBpbnMiOlt7ImxhdCI6MzguOTM1MSwibG5nIjotODMuNDU5NiwibmFtZSI6IkJyaWRnZSAxOiBTRk4gMDEyMzQ1NiIsImRlc2NyaXB0aW9uIjoiUm91dGU6IFNSLTAwMSB8IEZlYXR1cmU6IEV4YW1wbGUgQ3JlZWsgfCBMb2NhdGlvbjogRXhhbXBsZSBicmlkZ2UgbG9jYXRpb24gfCBDb3VudHk6IDAwMSJ9LHsibGF0IjozOC45NDUxLCJsbmciOi04My40Njk2LCJuYW1lIjoiQnJpZGdlIDI6IFNGTiA5ODc2NTQzIiwiZGVzY3JpcHRpb24iOiJSb3V0ZTogVVMtMDUwIHwgRmVhdHVyZTogRXhhbXBsZSBSaXZlciB8IExvY2F0aW9uOiBTZWNvbmQgZXhhbXBsZSBicmlkZ2UgbG9jYXRpb24gfCBDb3VudHk6IDAwMSJ9XX0"
+          "url": "https://www.google.com/maps/embed/v1/view?key=EXAMPLE_MAPS_KEY&center=38.9401%2C-83.4646&zoom=11"
         },
         {
           "id": "divider-1",

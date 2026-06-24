@@ -14,9 +14,6 @@
 
 """Main entry point for the A2A A2UI sample agent."""
 
-import base64
-import html
-import json
 import os
 
 import uvicorn
@@ -24,7 +21,6 @@ from a2a.server import tasks
 from a2a.server.apps import A2AStarletteApplication
 from a2a.server.request_handlers import DefaultRequestHandler
 from starlette.middleware.cors import CORSMiddleware
-from starlette.responses import HTMLResponse
 from starlette.responses import JSONResponse, RedirectResponse
 from starlette.routing import Route
 
@@ -79,118 +75,12 @@ async def maps_embed_handler(request):
     return RedirectResponse(url=url)
 
 
-async def bridge_map_handler(request):
-    """Render an interactive Google map with bridge pins for WebFrameUrl."""
-    encoded = request.query_params.get("data", "")
-    if not encoded:
-        return HTMLResponse("Missing map data", status_code=400)
-
-    try:
-        padded = encoded + "=" * (-len(encoded) % 4)
-        map_data = json.loads(base64.urlsafe_b64decode(padded).decode("utf-8"))
-    except Exception:
-        return HTMLResponse("Invalid map data", status_code=400)
-
-    api_key = get_google_maps_api_key()
-    if not api_key:
-        return HTMLResponse("Maps API key not configured", status_code=500)
-
-    center = map_data.get("center") or {}
-    pins = map_data.get("pins") or []
-    if not pins or "lat" not in center or "lng" not in center:
-        return HTMLResponse("No bridge coordinates available", status_code=400)
-
-    payload = json.dumps(
-        {
-            "center": center,
-            "zoom": map_data.get("zoom", 11),
-            "pins": pins[:50],
-        },
-        separators=(",", ":"),
-    ).replace("</", "<\\/")
-    escaped_key = html.escape(api_key, quote=True)
-
-    return HTMLResponse(
-        f"""<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Bridge Map</title>
-  <style>
-    html, body, #map {{
-      height: 100%;
-      margin: 0;
-      font-family: Arial, sans-serif;
-    }}
-    .info-title {{
-      font-weight: 700;
-      margin-bottom: 4px;
-    }}
-    .info-body {{
-      max-width: 280px;
-      line-height: 1.35;
-    }}
-  </style>
-</head>
-<body>
-  <div id="map" aria-label="Bridge locations map"></div>
-  <script>
-    const mapData = {payload};
-    const escapeHtml = (value) => String(value ?? "").replace(
-      /[&<>"']/g,
-      (char) => ({{
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;",
-        "'": "&#39;"
-      }}[char])
-    );
-    function initMap() {{
-      const map = new google.maps.Map(document.getElementById("map"), {{
-        center: mapData.center,
-        zoom: mapData.zoom,
-        mapTypeControl: true,
-        streetViewControl: false,
-        fullscreenControl: true
-      }});
-      const bounds = new google.maps.LatLngBounds();
-      const infoWindow = new google.maps.InfoWindow();
-      mapData.pins.forEach((pin) => {{
-        const position = {{ lat: pin.lat, lng: pin.lng }};
-        const marker = new google.maps.Marker({{
-          position,
-          map,
-          title: pin.name
-        }});
-        marker.addListener("click", () => {{
-          infoWindow.setContent(
-            `<div class="info-body"><div class="info-title">${{escapeHtml(pin.name)}}</div>` +
-            `<div>${{escapeHtml(pin.description)}}</div></div>`
-          );
-          infoWindow.open({{ anchor: marker, map }});
-        }});
-        bounds.extend(position);
-      }});
-      if (mapData.pins.length > 1) {{
-        map.fitBounds(bounds, 36);
-      }}
-    }}
-  </script>
-  <script async defer src="https://maps.googleapis.com/maps/api/js?key={escaped_key}&callback=initMap"></script>
-</body>
-</html>"""
-    )
-
-
 async def feedback_handler(request):
     """Dummy feedback handler for tests."""
     return JSONResponse({"status": "ok"})
 
 
 app.routes.append(Route("/maps/embed", maps_embed_handler))
-app.routes.append(Route("/bridge-map", bridge_map_handler))
 app.routes.append(Route("/feedback", feedback_handler, methods=["POST"]))
 
 # CORS: restrict to known origins to prevent the /maps/embed proxy from

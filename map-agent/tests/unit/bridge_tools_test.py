@@ -27,6 +27,7 @@ def test_search_bridges_uses_parameterized_query(mock_client_class):
     assert result["status"] == "success"
     assert "SELECT" in sql
     assert "FROM `your-project-id.transportation.bridge_data`" in sql
+    assert "WITH bridge_source AS" in sql
     assert "creek" not in sql
     assert "001" not in sql
     assert parameters["query"] == "%creek%"
@@ -35,8 +36,15 @@ def test_search_bridges_uses_parameterized_query(mock_client_class):
     assert parameters["limit"] == 10
 
 
+@patch(
+    "app.bridge_tools.build_maps_embed_url",
+    return_value="https://www.google.com/maps/embed/v1/place?key=test&q=38.9351%2C-83.4596",
+)
 @patch("app.bridge_tools.bigquery.Client")
-def test_search_bridges_returns_key_columns_and_single_bridge_map_path(mock_client_class):
+def test_search_bridges_returns_key_columns_and_single_bridge_map_path(
+    mock_client_class,
+    _mock_embed_url,
+):
     client = MagicMock()
     mock_client_class.return_value = client
     client.query.return_value.result.return_value = [
@@ -48,6 +56,7 @@ def test_search_bridges_returns_key_columns_and_single_bridge_map_path(mock_clie
             "SFN": "0123456",
             "STR_LOC": "Example location",
             "COUNTY_CD": "001",
+            "SOURCE_TABLE": "bridge_data",
         }
     ]
 
@@ -60,8 +69,9 @@ def test_search_bridges_returns_key_columns_and_single_bridge_map_path(mock_clie
     assert result["all_bridges_map"]["center"] == {"lat": 38.9351, "lng": -83.4596}
     assert result["all_bridges_map"]["zoom"] == 14
     assert result["all_bridges_map"]["frame_url"].startswith(
-        "http://127.0.0.1:8000/bridge-map?data="
+        "https://www.google.com/maps/embed/v1/place?"
     )
+    assert result["all_bridges_map"]["map_mode"] == "place"
     assert result["all_bridges_map"]["pins"] == [
         {
             "lat": 38.9351,
@@ -69,14 +79,22 @@ def test_search_bridges_returns_key_columns_and_single_bridge_map_path(mock_clie
             "name": "Bridge 1: SFN 0123456",
             "description": (
                 "Route: SR-001 | Feature: Example Creek | "
-                "Location: Example location | County: 001"
+                "Location: Example location | County: 001 | "
+                "Source: bridge_data"
             ),
         }
     ]
 
 
+@patch(
+    "app.bridge_tools.build_maps_embed_url",
+    return_value="https://www.google.com/maps/embed/v1/view?key=test&center=38.2%2C-83.2&zoom=10",
+)
 @patch("app.bridge_tools.bigquery.Client")
-def test_search_bridges_puts_all_bridge_coordinates_on_one_map(mock_client_class):
+def test_search_bridges_puts_all_bridge_coordinates_on_one_map(
+    mock_client_class,
+    _mock_embed_url,
+):
     client = MagicMock()
     mock_client_class.return_value = client
     client.query.return_value.result.return_value = [
@@ -88,6 +106,7 @@ def test_search_bridges_puts_all_bridge_coordinates_on_one_map(mock_client_class
             "SFN": "1",
             "STR_LOC": "Location A",
             "COUNTY_CD": "001",
+            "SOURCE_TABLE": "bridge_data",
         },
         {
             "LATITUDE_DD": 38.2,
@@ -97,6 +116,7 @@ def test_search_bridges_puts_all_bridge_coordinates_on_one_map(mock_client_class
             "SFN": "2",
             "STR_LOC": "Location B",
             "COUNTY_CD": "001",
+            "SOURCE_TABLE": "crash_data",
         },
         {
             "LATITUDE_DD": 38.3,
@@ -106,6 +126,7 @@ def test_search_bridges_puts_all_bridge_coordinates_on_one_map(mock_client_class
             "SFN": "3",
             "STR_LOC": "Location C",
             "COUNTY_CD": "001",
+            "SOURCE_TABLE": "traffic_data",
         },
     ]
 
@@ -116,8 +137,9 @@ def test_search_bridges_puts_all_bridge_coordinates_on_one_map(mock_client_class
     assert map_data["center"] == {"lat": 38.2, "lng": -83.2}
     assert map_data["zoom"] == 10
     assert map_data["frame_url"].startswith(
-        "http://127.0.0.1:8000/bridge-map?data="
+        "https://www.google.com/maps/embed/v1/view?"
     )
+    assert map_data["map_mode"] == "view"
     assert [pin["name"] for pin in map_data["pins"]] == [
         "Bridge 1: SFN 1",
         "Bridge 2: SFN 2",
@@ -127,9 +149,14 @@ def test_search_bridges_puts_all_bridge_coordinates_on_one_map(mock_client_class
     assert sum("map_embed_path" in bridge for bridge in result["bridges"]) == 0
 
 
+@patch(
+    "app.bridge_tools.build_maps_embed_url",
+    return_value="https://www.google.com/maps/embed/v1/place?key=test&q=38.9351%2C-83.4596",
+)
 @patch("app.bridge_tools.bigquery.Client")
 def test_search_bridges_returns_render_ready_a2ui_for_gemini_enterprise(
     mock_client_class,
+    _mock_embed_url,
 ):
     client = MagicMock()
     mock_client_class.return_value = client
@@ -142,6 +169,7 @@ def test_search_bridges_returns_render_ready_a2ui_for_gemini_enterprise(
             "SFN": "1",
             "STR_LOC": "Location",
             "COUNTY_CD": "001",
+            "SOURCE_TABLE": "bridge_data",
         }
     ]
     tool_context = MagicMock()
@@ -159,7 +187,7 @@ def test_search_bridges_returns_render_ready_a2ui_for_gemini_enterprise(
     assert "surfaceUpdate" in messages[1]
     assert "Bridge Search Results" in str(messages)
     assert "WebFrameUrl" in str(messages)
-    assert "/bridge-map?data=" in str(messages)
+    assert "https://www.google.com/maps/embed/v1/place?" in str(messages)
     assert "directions" not in str(messages)
     assert "Bridge 1: SFN 1" in str(messages)
     assert tool_context.actions.skip_summarization is True
@@ -177,6 +205,7 @@ def test_search_bridges_returns_safe_error(mock_client_class):
     assert "permission denied" in result["message"]
 
 
+@patch("app.bridge_tools.BRIDGE_BIGQUERY_TABLES", ())
 @patch("app.bridge_tools.BRIDGE_BIGQUERY_TABLE", "not-a-table")
 def test_search_bridges_rejects_invalid_configured_table():
     result = search_bridges(query="bridge")
@@ -184,3 +213,36 @@ def test_search_bridges_rejects_invalid_configured_table():
     assert result["status"] == "error"
     assert result["count"] == 0
     assert "PROJECT.DATASET.TABLE" in result["message"]
+
+
+@patch("app.bridge_tools.build_maps_embed_url", return_value=None)
+@patch(
+    "app.bridge_tools.BRIDGE_BIGQUERY_TABLES",
+    (
+        "project-id.transportation.bridge_data",
+        "project-id.transportation.crash_data",
+        "project-id.transportation.traffic_data",
+    ),
+)
+@patch("app.bridge_tools.bigquery.Client")
+def test_search_bridges_unions_up_to_three_configured_tables(
+    mock_client_class,
+    _mock_embed_url,
+):
+    client = MagicMock()
+    mock_client_class.return_value = client
+    client.query.return_value.result.return_value = []
+
+    result = search_bridges(query="franklin")
+
+    sql = client.query.call_args.args[0]
+    assert result["status"] == "success"
+    assert result["tables"] == [
+        "project-id.transportation.bridge_data",
+        "project-id.transportation.crash_data",
+        "project-id.transportation.traffic_data",
+    ]
+    assert "FROM `project-id.transportation.bridge_data`" in sql
+    assert "FROM `project-id.transportation.crash_data`" in sql
+    assert "FROM `project-id.transportation.traffic_data`" in sql
+    assert sql.count("UNION ALL") == 2

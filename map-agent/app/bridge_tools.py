@@ -1,7 +1,5 @@
 """Read-only BigQuery tools for searching bridge inventory records."""
 
-import base64
-import json
 import logging
 import re
 
@@ -10,10 +8,11 @@ from google.adk.tools.tool_context import ToolContext
 
 from app.bridge_ui import build_bridge_a2ui
 from app.config import (
-    AGENT_URL,
     BIGQUERY_JOB_PROJECT,
     BIGQUERY_LOCATION,
     BRIDGE_BIGQUERY_TABLE,
+    BRIDGE_BIGQUERY_TABLES,
+    build_maps_embed_url,
 )
 from app.session_keys import A2UI_CATALOG_KEY
 
@@ -49,6 +48,7 @@ def _row_to_bridge(row) -> dict:
         "structure_id": row.get("SFN"),
         "location": row.get("STR_LOC"),
         "county_code": row.get("COUNTY_CD"),
+        "source_table": row.get("SOURCE_TABLE"),
     }
 
 
@@ -63,8 +63,21 @@ def _pin_description(bridge: dict) -> str:
             f"Feature: {_clean_map_text(bridge.get('feature_crossed'))}",
             f"Location: {_clean_map_text(bridge.get('location'))}",
             f"County: {_clean_map_text(bridge.get('county_code'))}",
+            f"Source: {_clean_map_text(bridge.get('source_table'))}",
         )
     )
+
+
+def _configured_tables() -> tuple[str, ...]:
+    return BRIDGE_BIGQUERY_TABLES or (BRIDGE_BIGQUERY_TABLE,)
+
+
+def _table_label(table_id: str) -> str:
+    return table_id.rsplit(".", maxsplit=1)[-1]
+
+
+def _configured_tables_display() -> str:
+    return ",".join(_configured_tables())
 
 
 def _zoom_for_coordinates(coordinates: list[tuple[float, float]]) -> int:
@@ -73,7 +86,10 @@ def _zoom_for_coordinates(coordinates: list[tuple[float, float]]) -> int:
 
     latitudes = [latitude for latitude, _ in coordinates]
     longitudes = [longitude for _, longitude in coordinates]
-    spread = max(max(latitudes) - min(latitudes), max(longitudes) - min(longitudes))
+    spread = round(
+        max(max(latitudes) - min(latitudes), max(longitudes) - min(longitudes)),
+        6,
+    )
     if spread > 1.0:
         return 7
     if spread > 0.5:
@@ -86,7 +102,7 @@ def _zoom_for_coordinates(coordinates: list[tuple[float, float]]) -> int:
 
 
 def _build_all_bridges_map(bridges: list[dict]) -> dict | None:
-    """Build map center/zoom/pin data without turning assets into a route."""
+    """Build Google Maps Embed iframe data without custom HTML or JavaScript."""
     coordinates = [
         (float(bridge["latitude"]), float(bridge["longitude"]), bridge)
         for bridge in bridges
@@ -116,16 +132,31 @@ def _build_all_bridges_map(bridges: list[dict]) -> dict | None:
             }
         )
 
-    map_data = {
+    zoom = _zoom_for_coordinates(coordinate_pairs)
+    if len(coordinates) == 1:
+        latitude, longitude, bridge = coordinates[0]
+        structure_id = _clean_map_text(bridge.get("structure_id"))
+        frame_url = build_maps_embed_url(query=f"{latitude},{longitude} SFN {structure_id}")
+    else:
+        frame_url = build_maps_embed_url(
+            center=f"{center['lat']},{center['lng']}",
+            zoom=zoom,
+        )
+    if not frame_url:
+        return None
+
+    return {
         "center": center,
-        "zoom": _zoom_for_coordinates(coordinate_pairs),
+        "zoom": zoom,
         "pins": pins,
+        "frame_url": frame_url,
+        "map_mode": "place" if len(coordinates) == 1 else "view",
+        "embed_note": (
+            "Google Maps Embed API is used for Gemini Enterprise compatibility. "
+            "Multiple returned bridges are listed below the map; the iframe uses "
+            "a centered map view instead of custom JavaScript pins."
+        ),
     }
-    encoded = base64.urlsafe_b64encode(
-        json.dumps(map_data, separators=(",", ":")).encode("utf-8")
-    ).decode("ascii").rstrip("=")
-    map_data["frame_url"] = f"{AGENT_URL.rstrip('/')}/bridge-map?data={encoded}"
-    return map_data
 
 
 def search_bridges(
@@ -163,11 +194,18 @@ def search_bridges(
     except (TypeError, ValueError):
         limit = 10
 
-    if not _TABLE_ID_RE.fullmatch(BRIDGE_BIGQUERY_TABLE):
+    configured_tables = _configured_tables()
+    invalid_tables = [
+        table_id for table_id in configured_tables if not _TABLE_ID_RE.fullmatch(table_id)
+    ]
+    if invalid_tables:
         return {
             "status": "error",
-            "table": BRIDGE_BIGQUERY_TABLE,
-            "message": "BRIDGE_BIGQUERY_TABLE must be PROJECT.DATASET.TABLE.",
+            "table": _configured_tables_display(),
+            "message": (
+                "BRIDGE_BIGQUERY_TABLES must contain one to three table IDs in "
+                f"PROJECT.DATASET.TABLE format. Invalid: {', '.join(invalid_tables)}"
+            ),
             "count": 0,
             "bridges": [],
         }
@@ -220,10 +258,27 @@ def search_bridges(
             *[f"CAST({column} AS STRING) AS {column}" for column in _KEY_COLUMNS[2:]],
         )
     )
+    union_sources = "\nUNION ALL\n".join(
+        f"""SELECT
+  {selected_columns},
+  '{_table_label(table_id)}' AS SOURCE_TABLE
+FROM `{table_id}`"""
+        for table_id in configured_tables
+    )
     sql = f"""
+WITH bridge_source AS (
+{union_sources}
+)
 SELECT
-  {selected_columns}
-FROM `{BRIDGE_BIGQUERY_TABLE}`
+  LATITUDE_DD,
+  LONGITUDE_DD,
+  INVENT_FEAT,
+  RTE_ON_BRG_CD,
+  SFN,
+  STR_LOC,
+  COUNTY_CD,
+  SOURCE_TABLE
+FROM bridge_source
 {where_clause}
 ORDER BY SFN
 LIMIT @limit
@@ -239,7 +294,8 @@ LIMIT @limit
         bridges = [_row_to_bridge(row) for row in rows]
         result = {
             "status": "success",
-            "table": BRIDGE_BIGQUERY_TABLE,
+            "table": _configured_tables_display(),
+            "tables": list(configured_tables),
             "count": len(bridges),
             "bridges": bridges,
             "all_bridges_map": _build_all_bridges_map(bridges),
@@ -266,7 +322,8 @@ LIMIT @limit
         logger.exception("BigQuery bridge search failed")
         return {
             "status": "error",
-            "table": BRIDGE_BIGQUERY_TABLE,
+            "table": _configured_tables_display(),
+            "tables": list(configured_tables),
             "message": f"Bridge inventory query failed: {exc}",
             "count": 0,
             "bridges": [],

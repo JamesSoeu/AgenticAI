@@ -18,12 +18,18 @@ def _bridge_lines(bridge: dict) -> list[tuple[str, str]]:
         ("location", f"Location: {_display(bridge.get('location'))}"),
         ("feature", f"Feature crossed: {_display(bridge.get('feature_crossed'))}"),
         ("county", f"County code: {_display(bridge.get('county_code'))}"),
+        ("source", f"Source table: {_display(bridge.get('source_table'))}"),
         (
             "coordinates",
             "Coordinates: "
             f"{_display(bridge.get('latitude'))}, {_display(bridge.get('longitude'))}",
         ),
     ]
+
+
+def _bridge_heading(index: int, bridge: dict) -> str:
+    structure_id = _display(bridge.get("structure_id"))
+    return f"Bridge {index}: SFN {structure_id}"
 
 
 def _component_ids(bridges: list[dict], include_map: bool) -> list[str]:
@@ -96,7 +102,7 @@ def _build_v08(
                     "id": f"bridge-{index}-header",
                     "component": {
                         "Text": {
-                            "text": {"literalString": f"Bridge {index}"},
+                            "text": {"literalString": _bridge_heading(index, bridge)},
                             "usageHint": "h3",
                         }
                     },
@@ -170,7 +176,7 @@ def _build_v09(
                     "id": f"bridge-{index}-header",
                     "component": "Text",
                     "variant": "h3",
-                    "text": f"Bridge {index}",
+                    "text": _bridge_heading(index, bridge),
                 },
             ]
         )
