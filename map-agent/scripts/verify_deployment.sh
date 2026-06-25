@@ -21,8 +21,8 @@ import json
 import sys
 
 card = json.load(sys.stdin)
-assert card["name"] == "Bridge Inventory Agent", card["name"]
-assert any(skill["id"] == "search_bridge_inventory" for skill in card["skills"])
+assert card["name"] == "Transportation Map Agent", card["name"]
+assert any(skill["id"] == "search_transportation_map_records" for skill in card["skills"])
 uris = {extension["uri"] for extension in card["capabilities"]["extensions"]}
 assert "https://a2ui.org/a2a-extension/a2ui/v0.8" in uris
 print("Agent card OK:", card["name"])

@@ -31,7 +31,7 @@ flowchart LR
     data -- read docs, PDFs, text objects --> gcs
     data -- SQL/document reasoning --> vertex
 
-    map -- bridge inventory lookup --> bq
+    map -- schema-aware map SQL lookup --> bq
     map -- WebFrameUrl Google Maps Embed iframe --> ge
     map -- Maps Embed API key --> sm
     map -- embed map tiles and centered views --> maps
@@ -48,7 +48,7 @@ flowchart LR
 | --- | --- | --- | --- |
 | Router agent | `router-agent/` | Single front door imported into Gemini Enterprise | A2A server, ADK agent, LLM classifier, remote A2A calls to specialist agents |
 | Data agent | `data-agent/` | Data and document Q&A | BigQuery tables, Cloud Storage bucket, PDF/text reading, SQL generation controls |
-| Map agent | `map-agent/` | Bridge map and location Q&A | BigQuery bridge inventory, A2UI `WebFrameUrl`, Google Maps Embed iframe |
+| Map agent | `map-agent/` | Transportation map and location Q&A | Schema-aware BigQuery map tables, A2UI `WebFrameUrl`, Google Maps Embed iframe |
 
 ## Runtime Flow
 
@@ -57,15 +57,15 @@ flowchart LR
 3. Router agent uses an LLM classifier to choose the best specialist:
    - Data agent for BigQuery analytics, table counts, SQL answers, PDF/manual
      questions, and Cloud Storage document questions.
-   - Map agent for bridge location lookup, map display, coordinates, and visual
-     bridge inventory questions.
+   - Map agent for bridge, crash, road, traffic, asset location lookup, map
+     display, coordinates, and visual transportation questions.
 4. Router calls the selected specialist agent over A2A.
 5. Specialist agent queries BigQuery, Cloud Storage, Google Maps, or Gemini as
    needed.
 6. Specialist response returns through the router to Gemini Enterprise.
 7. Gemini Enterprise renders the answer. For map results, it renders a
    `WebFrameUrl` that points to a Google Maps Embed iframe. Multiple returned
-   bridges are listed below the map while the iframe shows a centered map view.
+   records are listed below the map while the iframe shows a centered map view.
 
 ## Feature Matrix
 
@@ -75,11 +75,11 @@ flowchart LR
 | A2A protocol | Yes | Yes | Yes |
 | ADK agent | Yes | Yes | Yes |
 | LLM routing/classification | Yes | No | No |
-| BigQuery access | No direct data query | Yes, multiple configured tables | Yes, bridge inventory table |
+| BigQuery access | No direct data query | Yes, multiple configured tables | Yes, schema-aware related map tables |
 | Cloud Storage access | No | Yes, bucket docs/PDFs/text | No |
 | PDF reading | No | Yes, with size/page/text limits | No |
 | A2UI rendering | Pass-through from specialist | Optional text/table style response | Yes, `WebFrameUrl` map response |
-| Google Maps display | No | No | Yes, interactive pins |
+| Google Maps display | No | No | Yes, Google Maps Embed iframe |
 | Secret Manager | Usually no | Optional | Yes, Maps API key |
 | Cloud Logging | Yes | Yes | Yes |
 
@@ -106,8 +106,8 @@ want-to-create-a-a2a-adk/
 
   map-agent/
     app/
-      agent.py              # Bridge inventory ADK agent
-      bridge_tools.py       # BigQuery bridge search and embed map data
+      agent.py              # Transportation map ADK agent
+      bridge_tools.py       # Schema-aware BigQuery map search and embed data
       bridge_ui.py          # A2UI WebFrameUrl payload builder
       main.py               # A2A app plus /maps/embed compatibility proxy
     cloudrun-env.example.yaml

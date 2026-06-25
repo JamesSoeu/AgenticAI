@@ -42,12 +42,12 @@
           "id": "results-header",
           "component": "Text",
           "variant": "h2",
-          "text": "Bridge Search Results"
+          "text": "Map Search Results"
         },
         {
           "id": "results-summary",
           "component": "Text",
-          "text": "Found 2 matching bridges."
+          "text": "Found 2 matching map records."
         },
         {
           "id": "map-frame",
@@ -63,7 +63,7 @@
           "id": "bridge-1-header",
           "component": "Text",
           "variant": "h3",
-          "text": "Bridge 1"
+          "text": "Record 1: 0123456"
         },
         {
           "id": "bridge-1-sfn",
@@ -104,7 +104,7 @@
           "id": "bridge-2-header",
           "component": "Text",
           "variant": "h3",
-          "text": "Bridge 2"
+          "text": "Record 2: 0123457"
         },
         {
           "id": "bridge-2-sfn",

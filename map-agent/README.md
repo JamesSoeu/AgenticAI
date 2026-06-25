@@ -1,12 +1,11 @@
 # Map Agent
 
-Backend-only A2A/A2UI Cloud Run service for bridge inventory map questions.
+Backend-only A2A/A2UI Cloud Run service for transportation map questions.
 
 It handles:
 
-- Bridge search from BigQuery
-- Up to three configured BigQuery map/search tables with the same bridge
-  location schema
+- Schema-aware search across related BigQuery map/search tables
+- Different table schemas for bridge, crash, road, traffic, and asset data
 - A2UI response creation for Gemini Enterprise
 - WebFrameUrl map responses for Gemini Enterprise using Google Maps Embed API
 - Google Maps Embed URL proxying through `/maps/embed` for compatibility links
@@ -14,9 +13,8 @@ It handles:
 There is no separate frontend folder in this monorepo version. Gemini Enterprise
 is the client that renders the A2UI `WebFrameUrl` response. The map iframe uses
 Google Maps Embed API directly because Gemini Enterprise can block custom HTML
-and JavaScript. Multiple bridge results are listed below the map; the iframe
-uses a centered map view instead of custom JavaScript pins or a directions
-route.
+and JavaScript. Multiple results are listed below the map; the iframe uses a
+centered map view instead of custom JavaScript pins or a directions route.
 
 ## Configure
 
@@ -34,28 +32,45 @@ GOOGLE_CLOUD_PROJECT: "YOUR_PROJECT_ID"
 GOOGLE_CLOUD_LOCATION: "global"
 MODEL: "gemini-3.5-flash"
 AGENT_URL: "https://YOUR-MAP-AGENT-URL.run.app"
-BRIDGE_BIGQUERY_TABLES: "YOUR_PROJECT_ID.transportation.bridge_data,YOUR_PROJECT_ID.transportation.crash_data,YOUR_PROJECT_ID.transportation.traffic_data"
+MAP_BIGQUERY_TABLES: "YOUR_PROJECT_ID.transportation.bridge_data,YOUR_PROJECT_ID.transportation.crash_data,YOUR_PROJECT_ID.transportation.road_data,YOUR_PROJECT_ID.transportation.traffic_data,YOUR_PROJECT_ID.transportation.asset_data"
+MAP_BIGQUERY_TABLE_ALIASES: "bridge,crash,road,traffic,asset"
+MAP_BIGQUERY_MAX_BYTES_BILLED: "1000000000"
+MAP_DEFAULT_LIMIT: "10"
+MAP_MAX_LIMIT: "50"
 BIGQUERY_JOB_PROJECT: "YOUR_PROJECT_ID"
 GOOGLE_MAPS_SECRET_NAME: "google_map_api_key"
 ```
 
-`BRIDGE_BIGQUERY_TABLES` accepts one to three comma-separated BigQuery table IDs.
-Each table must provide these columns because the map agent unions them into one
-map/search result set:
+`MAP_BIGQUERY_TABLES` accepts comma-separated BigQuery table IDs in either
+`project.dataset.table` or `dataset.table` form. `MAP_BIGQUERY_TABLE_ALIASES`
+is optional, but recommended, and must have the same number of values as the
+table list.
+
+The tables do not need identical columns. At runtime, the agent reads each
+configured BigQuery table schema, asks Gemini to choose the relevant table or
+join, validates the generated SQL, and then runs it as a read-only query.
+
+The generated SQL must return these standard output aliases so the map renderer
+can work:
 
 ```text
-LATITUDE_DD
-LONGITUDE_DD
-INVENT_FEAT
-RTE_ON_BRG_CD
-SFN
-STR_LOC
-COUNTY_CD
+latitude
+longitude
+title
+description
+source_table
 ```
 
-The old single-table setting still works:
+At least one configured table must contain usable latitude/longitude columns or
+joinable data that leads to latitude/longitude columns. If the schemas do not
+contain map-ready fields, the tool returns `cannot_map` instead of inventing
+coordinates.
+
+The old bridge-focused settings still work as fallback values, but new
+deployments should use `MAP_BIGQUERY_TABLES`:
 
 ```yaml
+BRIDGE_BIGQUERY_TABLES: "YOUR_PROJECT_ID.transportation.bridge_data"
 BRIDGE_BIGQUERY_TABLE: "YOUR_PROJECT_ID.transportation.bridge_data"
 ```
 
@@ -109,16 +124,17 @@ router-agent/cloudrun-env.yaml
 ```text
 Show bridges in county 001 on a map.
 Find bridge structure 1234567.
-Show bridges crossing a creek.
-Where is this bridge located?
+Show recent crashes in Franklin County on a map.
+Show traffic locations near route 23.
+Show road assets around bridge 1234567.
 ```
 
 ## Key Files
 
 - `app/main.py`: A2A Starlette application and `/maps/embed` compatibility proxy.
-- `app/agent.py`: ADK bridge inventory agent and agent card.
+- `app/agent.py`: ADK transportation map agent and agent card.
 - `app/agent_executor.py`: Converts ADK events into A2A/A2UI responses.
-- `app/bridge_tools.py`: BigQuery bridge search tool.
+- `app/bridge_tools.py`: Schema-aware BigQuery map search tool.
 - `app/bridge_ui.py`: A2UI map payload helpers.
 - `app/catalog_schemas/`: A2UI catalog schemas used by Gemini Enterprise.
 - `scripts/deploy_cloud_run.ps1`: Windows Cloud Run deployment.

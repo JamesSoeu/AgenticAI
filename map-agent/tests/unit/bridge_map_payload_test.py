@@ -56,7 +56,7 @@ def test_gemini_enterprise_v08_payload_has_bridge_details_and_map():
     assert "Coordinates" in component_text
     assert component_text.count("WebFrameUrl") == 1
     assert "directions" not in component_text
-    assert "Bridge 2" in component_text
+    assert "Record 2" in component_text
 
 
 def test_local_v09_payload_has_bridge_details_and_map():
@@ -75,7 +75,7 @@ def test_local_v09_payload_has_bridge_details_and_map():
     assert "Coordinates" in component_text
     assert sum(item.get("component") == "WebFrameUrl" for item in components) == 1
     assert "directions" not in component_text
-    assert "Bridge 2" in component_text
+    assert "Record 2" in component_text
 
 
 def test_deterministic_payloads_validate_for_both_supported_versions():

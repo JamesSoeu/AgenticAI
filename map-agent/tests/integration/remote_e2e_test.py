@@ -26,7 +26,7 @@ def _auth_headers() -> dict[str, str]:
     }
 
 
-def test_deployed_agent_card_is_bridge_inventory_agent():
+def test_deployed_agent_card_is_transportation_map_agent():
     response = requests.get(
         f"{AGENT_URL}/.well-known/agent-card.json",
         headers=_auth_headers(),
@@ -35,9 +35,12 @@ def test_deployed_agent_card_is_bridge_inventory_agent():
     response.raise_for_status()
     card = response.json()
 
-    assert card["name"] == "Bridge Inventory Agent"
+    assert card["name"] == "Transportation Map Agent"
     assert card["url"] == AGENT_URL
-    assert any(skill["id"] == "search_bridge_inventory" for skill in card["skills"])
+    assert any(
+        skill["id"] == "search_transportation_map_records"
+        for skill in card["skills"]
+    )
     assert any(
         extension["uri"] == "https://a2ui.org/a2a-extension/a2ui/v0.8"
         for extension in card["capabilities"]["extensions"]
@@ -78,5 +81,5 @@ def test_deployed_agent_returns_gemini_enterprise_bridge_results():
 
     assert any("beginRendering" in message for message in a2ui)
     assert any("surfaceUpdate" in message for message in a2ui)
-    assert "Bridge Search Results" in str(a2ui)
+    assert "Map Search Results" in str(a2ui)
     assert "Structure ID (SFN)" in str(a2ui)

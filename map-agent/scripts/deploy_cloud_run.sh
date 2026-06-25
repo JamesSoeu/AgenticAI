@@ -8,9 +8,13 @@ PROJECT_ID="${PROJECT_ID:-$(gcloud config get-value project 2>/dev/null)}"
 MAPS_SECRET="${GOOGLE_MAPS_SECRET_NAME:-google_map_api_key}"
 RUNTIME_SA_NAME="${RUNTIME_SA_NAME:-bridge-map-agent-sa}"
 MODEL="${MODEL:-gemini-3.5-flash}"
-BRIDGE_BIGQUERY_TABLES="${BRIDGE_BIGQUERY_TABLES:-${BRIDGE_BIGQUERY_TABLE:-your-project-id.transportation.bridge_data}}"
-FIRST_BRIDGE_BIGQUERY_TABLE="${BRIDGE_BIGQUERY_TABLES%%,*}"
-BRIDGE_DATA_PROJECT="${BRIDGE_DATA_PROJECT:-${FIRST_BRIDGE_BIGQUERY_TABLE%%.*}}"
+MAP_BIGQUERY_TABLES="${MAP_BIGQUERY_TABLES:-${BRIDGE_BIGQUERY_TABLES:-${BRIDGE_BIGQUERY_TABLE:-your-project-id.transportation.bridge_data}}}"
+MAP_BIGQUERY_TABLE_ALIASES="${MAP_BIGQUERY_TABLE_ALIASES:-${BRIDGE_BIGQUERY_TABLE_ALIASES:-}}"
+MAP_BIGQUERY_MAX_BYTES_BILLED="${MAP_BIGQUERY_MAX_BYTES_BILLED:-1000000000}"
+MAP_DEFAULT_LIMIT="${MAP_DEFAULT_LIMIT:-10}"
+MAP_MAX_LIMIT="${MAP_MAX_LIMIT:-50}"
+FIRST_MAP_BIGQUERY_TABLE="${MAP_BIGQUERY_TABLES%%,*}"
+MAP_DATA_PROJECT="${MAP_DATA_PROJECT:-${BRIDGE_DATA_PROJECT:-${FIRST_MAP_BIGQUERY_TABLE%%.*}}}"
 BIGQUERY_LOCATION="${BIGQUERY_LOCATION:-}"
 
 if [[ -z "${PROJECT_ID}" || "${PROJECT_ID}" == "(unset)" ]]; then
@@ -45,7 +49,7 @@ gcloud services enable \
 echo "Ensuring the runtime service account exists..."
 if ! gcloud iam service-accounts describe "${RUNTIME_SA}" --project "${PROJECT_ID}" >/dev/null 2>&1; then
   gcloud iam service-accounts create "${RUNTIME_SA_NAME}" \
-    --display-name "Bridge Inventory Agent Runtime" \
+    --display-name "Transportation Map Agent Runtime" \
     --project "${PROJECT_ID}"
 fi
 
@@ -61,8 +65,8 @@ gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
   --condition=None \
   --quiet >/dev/null
 
-echo "Granting read access to bridge inventory project ${BRIDGE_DATA_PROJECT}..."
-gcloud projects add-iam-policy-binding "${BRIDGE_DATA_PROJECT}" \
+echo "Granting read access to map data project ${MAP_DATA_PROJECT}..."
+gcloud projects add-iam-policy-binding "${MAP_DATA_PROJECT}" \
   --member "serviceAccount:${RUNTIME_SA}" \
   --role "roles/bigquery.dataViewer" \
   --condition=None \
@@ -91,7 +95,7 @@ gcloud run deploy "${SERVICE_NAME}" \
   --no-allow-unauthenticated \
   --no-cpu-throttling \
   --set-secrets "GOOGLE_MAPS_API_KEY=${MAPS_SECRET}:latest" \
-  --set-env-vars "GOOGLE_CLOUD_PROJECT=${PROJECT_ID},GOOGLE_CLOUD_LOCATION=global,GOOGLE_GENAI_USE_VERTEXAI=true,MODEL=${MODEL},BRIDGE_BIGQUERY_TABLES=${BRIDGE_BIGQUERY_TABLES},BIGQUERY_JOB_PROJECT=${PROJECT_ID},BIGQUERY_LOCATION=${BIGQUERY_LOCATION}" \
+  --set-env-vars "GOOGLE_CLOUD_PROJECT=${PROJECT_ID},GOOGLE_CLOUD_LOCATION=global,GOOGLE_GENAI_USE_VERTEXAI=true,MODEL=${MODEL},MAP_BIGQUERY_TABLES=${MAP_BIGQUERY_TABLES},MAP_BIGQUERY_TABLE_ALIASES=${MAP_BIGQUERY_TABLE_ALIASES},MAP_BIGQUERY_MAX_BYTES_BILLED=${MAP_BIGQUERY_MAX_BYTES_BILLED},MAP_DEFAULT_LIMIT=${MAP_DEFAULT_LIMIT},MAP_MAX_LIMIT=${MAP_MAX_LIMIT},BIGQUERY_JOB_PROJECT=${PROJECT_ID},BIGQUERY_LOCATION=${BIGQUERY_LOCATION}" \
   --quiet
 
 SERVICE_URL="$(gcloud run services describe "${SERVICE_NAME}" \

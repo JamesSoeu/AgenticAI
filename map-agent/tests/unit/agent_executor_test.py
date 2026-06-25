@@ -147,7 +147,7 @@ def test_converter_turns_search_result_directly_into_a2ui_parts():
         },
     ]
     response = types.Part.from_function_response(
-        name="search_bridges",
+        name="search_map_records",
         response={"validated_a2ui_json": messages},
     )
 

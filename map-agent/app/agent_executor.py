@@ -209,7 +209,7 @@ class BridgeInventoryExecutor(A2aAgentExecutor):
             event_converter=_MapsKeyEventConverter(bypass_tool_check=True)
         )
         # `use_legacy=True` ensures `_prepare_session` sets the active A2UI
-        # catalog before search_bridges builds its deterministic UI payload.
+        # catalog before search_map_records builds its deterministic UI payload.
         super().__init__(
             runner=self._agent.get_runner(),
             config=config,

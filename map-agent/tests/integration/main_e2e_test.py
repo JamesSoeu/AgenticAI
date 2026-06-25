@@ -79,11 +79,13 @@ def _send(text: str) -> dict:
     ).json()
 
 
-def test_agent_card_is_bridge_inventory_agent(server):
+def test_agent_card_is_transportation_map_agent(server):
     card = requests.get(f"{BASE_URL}/.well-known/agent-card.json", timeout=10).json()
-    assert card["name"] == "Bridge Inventory Agent"
+    assert card["name"] == "Transportation Map Agent"
     assert card["url"] == BASE_URL
-    assert [skill["id"] for skill in card["skills"]] == ["search_bridge_inventory"]
+    assert [skill["id"] for skill in card["skills"]] == [
+        "search_transportation_map_records"
+    ]
 
 
 def test_bridge_inventory_request_returns_a2ui_results(server):
@@ -100,5 +102,5 @@ def test_bridge_inventory_request_returns_a2ui_results(server):
     ]
     assert any("beginRendering" in item for item in a2ui)
     assert any("surfaceUpdate" in item for item in a2ui)
-    assert "Bridge Search Results" in str(a2ui)
+    assert "Map Search Results" in str(a2ui)
     assert "Structure ID (SFN)" in str(a2ui)

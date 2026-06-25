@@ -15,13 +15,13 @@
 """Unit tests for agent card creation."""
 
 from app.agent import BridgeInventoryAgent
-from app.bridge_tools import search_bridges
+from app.bridge_tools import search_map_records
 
 
 def test_agent_card_has_required_fields():
     agent = BridgeInventoryAgent(base_url="http://localhost:8000")
     card = agent.agent_card
-    assert card.name == "Bridge Inventory Agent"
+    assert card.name == "Transportation Map Agent"
     assert card.description
     assert card.url == "http://localhost:8000"
     assert card.version
@@ -33,7 +33,7 @@ def test_agent_card_has_skills():
     assert card.skills
     assert len(card.skills) > 0
     skill = card.skills[0]
-    assert skill.id == "search_bridge_inventory"
+    assert skill.id == "search_transportation_map_records"
     assert skill.name
     assert skill.description
     assert skill.examples
@@ -74,6 +74,6 @@ def test_agent_only_asks_model_to_call_small_search_tool():
     agent = BridgeInventoryAgent(base_url="http://localhost:8000")
     llm_agent = agent.get_runner().agent
 
-    assert llm_agent.tools == [search_bridges]
+    assert llm_agent.tools == [search_map_records]
     assert "send_a2ui_json_to_client" not in llm_agent.instruction
     assert "Do not write A2UI JSON" in llm_agent.instruction

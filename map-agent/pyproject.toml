@@ -12,7 +12,7 @@ dev = [
 [project]
 name = "gemini-enterprise-bridge-map"
 version = "0.1.0"
-description = "Gemini Enterprise A2UI agent that maps bridge inventory from BigQuery."
+description = "Gemini Enterprise A2UI agent that maps transportation records from BigQuery."
 authors = [
   {name = "Your Name", email = "your@email.com"}
 ]
@@ -41,7 +41,7 @@ lint = [
 # Generation metadata - enables CLI commands to understand project context
 # These fields allow any generated project to work as a remote template
 name = "gemini-enterprise-bridge-map"
-description = "Gemini Enterprise bridge map agent with A2A and A2UI"
+description = "Gemini Enterprise transportation map agent with A2A and A2UI"
 base_template = "adk_a2a"
 agent_directory = "app"
 # Generation context

@@ -14,7 +14,9 @@ def test_cloud_run_deploy_binds_maps_secret_and_gemini_enterprise_invoker():
     assert "gcp-sa-discoveryengine.iam.gserviceaccount.com" in script
     assert 'roles/bigquery.jobUser' in script
     assert 'roles/bigquery.dataViewer' in script
-    assert 'BRIDGE_BIGQUERY_TABLES=${BRIDGE_BIGQUERY_TABLES}' in script
+    assert 'MAP_BIGQUERY_TABLES=${MAP_BIGQUERY_TABLES}' in script
+    assert 'MAP_BIGQUERY_TABLE_ALIASES=${MAP_BIGQUERY_TABLE_ALIASES}' in script
+    assert 'MAP_BIGQUERY_MAX_BYTES_BILLED=${MAP_BIGQUERY_MAX_BYTES_BILLED}' in script
     assert 'AGENT_URL=${SERVICE_URL}' in script
 
 
@@ -33,7 +35,9 @@ def test_powershell_deploy_matches_cloud_run_contract():
     assert "roles/bigquery.jobUser" in script
     assert "roles/bigquery.dataViewer" in script
     assert "gcp-sa-discoveryengine.iam.gserviceaccount.com" in script
-    assert "BRIDGE_BIGQUERY_TABLES=$BridgeBigQueryTables" in script
+    assert "MAP_BIGQUERY_TABLES=$MapBigQueryTables" in script
+    assert "MAP_BIGQUERY_TABLE_ALIASES=$MapBigQueryTableAliases" in script
+    assert "MAP_BIGQUERY_MAX_BYTES_BILLED=$MapBigQueryMaxBytesBilled" in script
 
 
 def test_powershell_verify_and_registration_scripts_exist():
@@ -41,8 +45,8 @@ def test_powershell_verify_and_registration_scripts_exist():
     register = (ROOT / "scripts" / "register_gemini_enterprise.ps1").read_text()
     secret = (ROOT / "scripts" / "set_maps_secret.ps1").read_text()
 
-    assert "Bridge Inventory Agent" in verify
-    assert "search_bridge_inventory" in verify
+    assert "Transportation Map Agent" in verify
+    assert "search_transportation_map_records" in verify
     assert "register-gemini-enterprise" in register
     assert "agent-starter-pack@0.41.3" in register
     assert "WriteAllText" in secret

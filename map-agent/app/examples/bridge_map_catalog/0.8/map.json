@@ -46,7 +46,7 @@
           "component": {
             "Text": {
               "text": {
-                "literalString": "Bridge Search Results"
+                "literalString": "Map Search Results"
               },
               "usageHint": "h2"
             }
@@ -57,7 +57,7 @@
           "component": {
             "Text": {
               "text": {
-                "literalString": "Found 2 matching bridges."
+                "literalString": "Found 2 matching map records."
               },
               "usageHint": "body"
             }
@@ -86,7 +86,7 @@
           "component": {
             "Text": {
               "text": {
-                "literalString": "Bridge 1"
+                "literalString": "Record 1: 0123456"
               },
               "usageHint": "h3"
             }
@@ -171,7 +171,7 @@
           "component": {
             "Text": {
               "text": {
-                "literalString": "Bridge 2"
+                "literalString": "Record 2: 0123457"
               },
               "usageHint": "h3"
             }

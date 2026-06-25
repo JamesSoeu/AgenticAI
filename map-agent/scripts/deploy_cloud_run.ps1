@@ -6,8 +6,12 @@ param(
     [string]$MapsSecret = $(if ($env:GOOGLE_MAPS_SECRET_NAME) { $env:GOOGLE_MAPS_SECRET_NAME } else { "google_map_api_key" }),
     [string]$RuntimeServiceAccountName = $(if ($env:RUNTIME_SA_NAME) { $env:RUNTIME_SA_NAME } else { "bridge-map-agent-sa" }),
     [string]$Model = $(if ($env:MODEL) { $env:MODEL } else { "gemini-3.5-flash" }),
-    [string]$BridgeBigQueryTables = $(if ($env:BRIDGE_BIGQUERY_TABLES) { $env:BRIDGE_BIGQUERY_TABLES } elseif ($env:BRIDGE_BIGQUERY_TABLE) { $env:BRIDGE_BIGQUERY_TABLE } else { "your-project-id.transportation.bridge_data" }),
-    [string]$BridgeDataProject = $env:BRIDGE_DATA_PROJECT,
+    [string]$MapBigQueryTables = $(if ($env:MAP_BIGQUERY_TABLES) { $env:MAP_BIGQUERY_TABLES } elseif ($env:BRIDGE_BIGQUERY_TABLES) { $env:BRIDGE_BIGQUERY_TABLES } elseif ($env:BRIDGE_BIGQUERY_TABLE) { $env:BRIDGE_BIGQUERY_TABLE } else { "your-project-id.transportation.bridge_data" }),
+    [string]$MapBigQueryTableAliases = $(if ($env:MAP_BIGQUERY_TABLE_ALIASES) { $env:MAP_BIGQUERY_TABLE_ALIASES } elseif ($env:BRIDGE_BIGQUERY_TABLE_ALIASES) { $env:BRIDGE_BIGQUERY_TABLE_ALIASES } else { "" }),
+    [string]$MapBigQueryMaxBytesBilled = $(if ($env:MAP_BIGQUERY_MAX_BYTES_BILLED) { $env:MAP_BIGQUERY_MAX_BYTES_BILLED } else { "1000000000" }),
+    [string]$MapDefaultLimit = $(if ($env:MAP_DEFAULT_LIMIT) { $env:MAP_DEFAULT_LIMIT } else { "10" }),
+    [string]$MapMaxLimit = $(if ($env:MAP_MAX_LIMIT) { $env:MAP_MAX_LIMIT } else { "50" }),
+    [string]$MapDataProject = $(if ($env:MAP_DATA_PROJECT) { $env:MAP_DATA_PROJECT } else { $env:BRIDGE_DATA_PROJECT }),
     [string]$BigQueryLocation = $env:BIGQUERY_LOCATION
 )
 
@@ -33,9 +37,9 @@ if (-not $ProjectId) {
 if (-not $ProjectId -or $ProjectId -eq "(unset)") {
     throw "Set -ProjectId, `$env:PROJECT_ID, or run: gcloud config set project YOUR_PROJECT_ID"
 }
-if (-not $BridgeDataProject) {
-    $FirstBridgeBigQueryTable = $BridgeBigQueryTables.Split(",")[0].Trim()
-    $BridgeDataProject = $FirstBridgeBigQueryTable.Split(".")[0]
+if (-not $MapDataProject) {
+    $FirstMapBigQueryTable = $MapBigQueryTables.Split(",")[0].Trim()
+    $MapDataProject = $FirstMapBigQueryTable.Split(".")[0]
 }
 
 $ProjectNumber = (& gcloud projects describe $ProjectId --format="value(projectNumber)").Trim()
@@ -63,7 +67,7 @@ Write-Host "Ensuring runtime service account exists..."
 & gcloud iam service-accounts describe $RuntimeServiceAccount --project $ProjectId *> $null
 if ($LASTEXITCODE -ne 0) {
     Invoke-GCloud iam service-accounts create $RuntimeServiceAccountName `
-        --display-name "Bridge Inventory Agent Runtime" `
+        --display-name "Transportation Map Agent Runtime" `
         --project $ProjectId
 }
 
@@ -79,8 +83,8 @@ Invoke-GCloud projects add-iam-policy-binding $ProjectId `
     --condition=None `
     --quiet
 
-Write-Host "Granting read access to bridge inventory project $BridgeDataProject..."
-Invoke-GCloud projects add-iam-policy-binding $BridgeDataProject `
+Write-Host "Granting read access to map data project $MapDataProject..."
+Invoke-GCloud projects add-iam-policy-binding $MapDataProject `
     --member "serviceAccount:$RuntimeServiceAccount" `
     --role "roles/bigquery.dataViewer" `
     --condition=None `
@@ -106,7 +110,11 @@ $EnvironmentVariables = @(
     "GOOGLE_CLOUD_LOCATION=global"
     "GOOGLE_GENAI_USE_VERTEXAI=true"
     "MODEL=$Model"
-    "BRIDGE_BIGQUERY_TABLES=$BridgeBigQueryTables"
+    "MAP_BIGQUERY_TABLES=$MapBigQueryTables"
+    "MAP_BIGQUERY_TABLE_ALIASES=$MapBigQueryTableAliases"
+    "MAP_BIGQUERY_MAX_BYTES_BILLED=$MapBigQueryMaxBytesBilled"
+    "MAP_DEFAULT_LIMIT=$MapDefaultLimit"
+    "MAP_MAX_LIMIT=$MapMaxLimit"
     "BIGQUERY_JOB_PROJECT=$ProjectId"
     "BIGQUERY_LOCATION=$BigQueryLocation"
 ) -join ","

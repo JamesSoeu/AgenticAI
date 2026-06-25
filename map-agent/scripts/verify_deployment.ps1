@@ -37,11 +37,11 @@ $Card = Invoke-RestMethod `
     -Headers $Headers `
     -Method Get
 
-if ($Card.name -ne "Bridge Inventory Agent") {
+if ($Card.name -ne "Transportation Map Agent") {
     throw "Unexpected agent card name: $($Card.name)"
 }
-if (-not ($Card.skills.id -contains "search_bridge_inventory")) {
-    throw "Agent card is missing search_bridge_inventory."
+if (-not ($Card.skills.id -contains "search_transportation_map_records")) {
+    throw "Agent card is missing search_transportation_map_records."
 }
 if (-not ($Card.capabilities.extensions.uri -contains "https://a2ui.org/a2a-extension/a2ui/v0.8")) {
     throw "Agent card is missing the A2UI v0.8 extension."

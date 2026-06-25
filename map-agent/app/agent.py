@@ -1,4 +1,4 @@
-"""Bridge inventory agent using BigQuery and A2UI."""
+"""Transportation map agent using BigQuery and A2UI."""
 
 import os
 from typing import ClassVar
@@ -27,7 +27,7 @@ from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai import types
 
-from app.bridge_tools import search_bridges
+from app.bridge_tools import search_map_records
 from app.config import DEFAULT_MODEL
 from app.session_keys import A2UI_CATALOG_KEY
 
@@ -40,26 +40,28 @@ CATALOG_DEFINITION_V0_9 = os.path.join(
 )
 
 ROLE_DESCRIPTION = """
-You are the Bridge Inventory Agent for Gemini Enterprise.
-Help users search the configured BigQuery bridge/map tables and display the
-matching bridge details and map inside the chat window.
+You are the Transportation Map Agent for Gemini Enterprise.
+Help users search the configured BigQuery transportation/map tables and display
+matching records on a map inside the chat window.
 
-For every bridge or map request, call `search_bridges` exactly once. Use only
-values returned by that tool; never invent bridge details. The tool
-automatically renders matching bridge results in the chat window. Do not write A2UI JSON and do not call any additional rendering function.
+For every map, location, bridge, crash, road, traffic, or asset display request,
+call `search_map_records` exactly once with the user's full request. Use only
+values returned by that tool; never invent map details. The tool automatically
+renders matching results in the chat window. Do not write A2UI JSON and do not
+call any additional rendering function.
 """
 
 WORKFLOW_DESCRIPTION = """
-1. Translate the user's request into `search_bridges` filters. Use `query` for
-   general search text and the specific parameters for county code, route code,
-   structure ID, location, or crossed feature.
-2. Call `search_bridges` exactly once. Never write SQL yourself.
-3. If the tool returns no bridges, clearly say no matching bridges were found
-   and do not create an empty UI.
-4. The search tool automatically renders all returned key columns, source table,
-   and one map containing every bridge with valid coordinates as pins. Do not
-   ask Google Maps to create a directions route between bridge locations.
-5. Never output raw JSON, Python code, A2UI markup, or a rendering function call.
+1. Pass the user's complete request to `search_map_records`.
+2. Call `search_map_records` exactly once. Never write SQL yourself.
+3. If the tool returns no records, clearly say no matching map records were
+   found and do not create an empty UI.
+4. The search tool reads the configured BigQuery schemas, chooses relevant
+   tables, runs validated read-only SQL, and renders returned map records.
+5. For multiple records, show a centered Google Maps Embed iframe and list the
+   returned records below it. Do not ask Google Maps to create a directions
+   route between locations.
+6. Never output raw JSON, Python code, A2UI markup, or a rendering function call.
 """
 
 class _MergedBasicCatalogProvider(A2uiCatalogProvider):
@@ -95,7 +97,7 @@ class _MergedBasicCatalogProvider(A2uiCatalogProvider):
 
 
 class BridgeInventoryAgent:
-    """A2A agent that searches and renders bridge inventory records."""
+    """A2A agent that searches and renders transportation map records."""
 
     SUPPORTED_CONTENT_TYPES: ClassVar[list[str]] = ["text/plain"]
 
@@ -163,8 +165,11 @@ class BridgeInventoryAgent:
             for version, manager in self._schema_managers.items()
         ]
         return AgentCard(
-            name="Bridge Inventory Agent",
-            description="Searches BigQuery bridge/map tables and displays results with maps.",
+            name="Transportation Map Agent",
+            description=(
+                "Searches schema-aware BigQuery transportation/map tables and "
+                "displays results with Google Maps Embed iframes."
+            ),
             url=self.base_url,
             version="1.0.0",
             default_input_modes=self.SUPPORTED_CONTENT_TYPES,
@@ -172,14 +177,17 @@ class BridgeInventoryAgent:
             capabilities=AgentCapabilities(streaming=True, extensions=extensions),
             skills=[
                 AgentSkill(
-                    id="search_bridge_inventory",
-                    name="Search Bridge Inventory",
-                    description="Search configured bridge/map records and display their details and map.",
-                    tags=["bridge", "inventory", "map", "bigquery"],
+                    id="search_transportation_map_records",
+                    name="Search Transportation Map Records",
+                    description=(
+                        "Search configured BigQuery map records across related "
+                        "tables and display their details and map."
+                    ),
+                    tags=["bridge", "crash", "road", "traffic", "map", "bigquery"],
                     examples=[
                         "Show bridges in county 001.",
-                        "Find bridge structure 1234567.",
-                        "Show bridges crossing a creek.",
+                        "Show recent crashes in Franklin County on a map.",
+                        "Show traffic locations near route 23.",
                     ],
                 )
             ],
@@ -193,9 +201,9 @@ class BridgeInventoryAgent:
                 retry_options=types.HttpRetryOptions(attempts=3),
             ),
             name="a2ui_bridge_map",
-            description="Bridge Inventory Agent using BigQuery and Google Maps",
+            description="Transportation map agent using BigQuery and Google Maps",
             instruction=instruction,
-            tools=[search_bridges],
+            tools=[search_map_records],
         )
         return Runner(
             app_name="a2ui_bridge_map",

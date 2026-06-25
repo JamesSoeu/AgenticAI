@@ -1,4 +1,4 @@
-"""Deterministic A2UI payload generation for bridge search results."""
+"""Deterministic A2UI payload generation for map search results."""
 
 from uuid import uuid4
 
@@ -11,42 +11,56 @@ def _display(value) -> str:
     return "Not available" if value in (None, "") else str(value)
 
 
-def _bridge_lines(bridge: dict) -> list[tuple[str, str]]:
-    return [
-        ("sfn", f"Structure ID (SFN): {_display(bridge.get('structure_id'))}"),
-        ("route", f"Route code: {_display(bridge.get('route_code'))}"),
-        ("location", f"Location: {_display(bridge.get('location'))}"),
-        ("feature", f"Feature crossed: {_display(bridge.get('feature_crossed'))}"),
-        ("county", f"County code: {_display(bridge.get('county_code'))}"),
-        ("source", f"Source table: {_display(bridge.get('source_table'))}"),
+def _record_lines(record: dict) -> list[tuple[str, str]]:
+    lines = [
+        ("title", f"Title: {_display(record.get('title') or record.get('structure_id'))}"),
         (
-            "coordinates",
-            "Coordinates: "
-            f"{_display(bridge.get('latitude'))}, {_display(bridge.get('longitude'))}",
+            "description",
+            f"Description: {_display(record.get('description') or record.get('location'))}",
         ),
     ]
+    optional_fields = [
+        ("sfn", "Structure ID (SFN)", record.get("structure_id")),
+        ("route", "Route code", record.get("route_code")),
+        ("feature", "Feature crossed", record.get("feature_crossed")),
+        ("county", "County code", record.get("county_code")),
+    ]
+    for key, label, value in optional_fields:
+        if value not in (None, ""):
+            lines.append((key, f"{label}: {_display(value)}"))
+    lines.extend(
+        [
+            ("source", f"Source table: {_display(record.get('source_table'))}"),
+            (
+                "coordinates",
+                "Coordinates: "
+                f"{_display(record.get('latitude'))}, {_display(record.get('longitude'))}",
+            ),
+        ]
+    )
+    return lines
 
 
-def _bridge_heading(index: int, bridge: dict) -> str:
-    structure_id = _display(bridge.get("structure_id"))
-    return f"Bridge {index}: SFN {structure_id}"
+def _record_heading(index: int, record: dict) -> str:
+    title = _display(record.get("title") or record.get("structure_id"))
+    return f"Record {index}: {title}"
 
 
-def _component_ids(bridges: list[dict], include_map: bool) -> list[str]:
+def _component_ids(records: list[dict], include_map: bool) -> list[str]:
     ids = ["results-header", "results-summary"]
     if include_map:
         ids.append("map-frame")
-    for index, bridge in enumerate(bridges, start=1):
+    for index, record in enumerate(records, start=1):
         ids.append(f"divider-{index}")
-        ids.append(f"bridge-{index}-header")
-        ids.extend(f"bridge-{index}-{key}" for key, _ in _bridge_lines(bridge))
+        ids.append(f"record-{index}-header")
+        ids.extend(f"record-{index}-{key}" for key, _ in _record_lines(record))
     return ids
 
 
 def _build_v08(
-    bridges: list[dict], map_data: dict | None, surface_id: str
+    records: list[dict], map_data: dict | None, surface_id: str
 ) -> list[dict]:
-    component_ids = _component_ids(bridges, bool(map_data))
+    component_ids = _component_ids(records, bool(map_data))
     components = [
         {
             "id": "root-column",
@@ -62,7 +76,7 @@ def _build_v08(
             "id": "results-header",
             "component": {
                 "Text": {
-                    "text": {"literalString": "Bridge Search Results"},
+                    "text": {"literalString": "Map Search Results"},
                     "usageHint": "h2",
                 }
             },
@@ -72,7 +86,7 @@ def _build_v08(
             "component": {
                 "Text": {
                     "text": {
-                        "literalString": f"Found {len(bridges)} matching bridges."
+                        "literalString": f"Found {len(records)} matching map records."
                     },
                     "usageHint": "body",
                 }
@@ -91,7 +105,7 @@ def _build_v08(
             }
         )
 
-    for index, bridge in enumerate(bridges, start=1):
+    for index, record in enumerate(records, start=1):
         components.extend(
             [
                 {
@@ -99,20 +113,20 @@ def _build_v08(
                     "component": {"Divider": {"axis": "horizontal"}},
                 },
                 {
-                    "id": f"bridge-{index}-header",
+                    "id": f"record-{index}-header",
                     "component": {
                         "Text": {
-                            "text": {"literalString": _bridge_heading(index, bridge)},
+                            "text": {"literalString": _record_heading(index, record)},
                             "usageHint": "h3",
                         }
                     },
                 },
             ]
         )
-        for key, text in _bridge_lines(bridge):
+        for key, text in _record_lines(record):
             components.append(
                 {
-                    "id": f"bridge-{index}-{key}",
+                    "id": f"record-{index}-{key}",
                     "component": {
                         "Text": {
                             "text": {"literalString": text},
@@ -129,12 +143,12 @@ def _build_v08(
 
 
 def _build_v09(
-    bridges: list[dict],
+    records: list[dict],
     map_data: dict | None,
     surface_id: str,
     catalog_id: str,
 ) -> list[dict]:
-    component_ids = _component_ids(bridges, bool(map_data))
+    component_ids = _component_ids(records, bool(map_data))
     components = [
         {
             "id": "root",
@@ -147,12 +161,12 @@ def _build_v09(
             "id": "results-header",
             "component": "Text",
             "variant": "h2",
-            "text": "Bridge Search Results",
+            "text": "Map Search Results",
         },
         {
             "id": "results-summary",
             "component": "Text",
-            "text": f"Found {len(bridges)} matching bridges.",
+            "text": f"Found {len(records)} matching map records.",
         },
     ]
     if map_data:
@@ -164,7 +178,7 @@ def _build_v09(
             }
         )
 
-    for index, bridge in enumerate(bridges, start=1):
+    for index, record in enumerate(records, start=1):
         components.extend(
             [
                 {
@@ -173,17 +187,17 @@ def _build_v09(
                     "axis": "horizontal",
                 },
                 {
-                    "id": f"bridge-{index}-header",
+                    "id": f"record-{index}-header",
                     "component": "Text",
                     "variant": "h3",
-                    "text": _bridge_heading(index, bridge),
+                    "text": _record_heading(index, record),
                 },
             ]
         )
-        for key, text in _bridge_lines(bridge):
+        for key, text in _record_lines(record):
             components.append(
                 {
-                    "id": f"bridge-{index}-{key}",
+                    "id": f"record-{index}-{key}",
                     "component": "Text",
                     "text": text,
                 }
@@ -202,19 +216,19 @@ def _build_v09(
 
 
 def build_bridge_a2ui(
-    bridges: list[dict],
+    records: list[dict],
     map_data: dict | None,
     *,
     version: str | None = None,
     catalog_id: str | None = None,
 ) -> list[dict]:
     """Build render-ready A2UI messages without asking the model to write JSON."""
-    surface_id = f"bridge-results-{uuid4().hex[:12]}"
+    surface_id = f"map-results-{uuid4().hex[:12]}"
     if version == VERSION_0_9:
         return _build_v09(
-            bridges,
+            records,
             map_data,
             surface_id,
             catalog_id or DEFAULT_V09_CATALOG_ID,
         )
-    return _build_v08(bridges, map_data, surface_id)
+    return _build_v08(records, map_data, surface_id)
