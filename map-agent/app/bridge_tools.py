@@ -134,7 +134,8 @@ def _build_map_data(records: list[dict[str, Any]]) -> dict | None:
     if len(coordinates) == 1:
         latitude, longitude, record = coordinates[0]
         frame_url = build_maps_embed_url(
-            query=f"{latitude},{longitude} {_clean_map_text(record.get('title'))}"
+            center=f"{latitude},{longitude}",
+            zoom=17,
         )
     else:
         frame_url = build_maps_embed_url(
@@ -149,7 +150,7 @@ def _build_map_data(records: list[dict[str, Any]]) -> dict | None:
         "zoom": zoom,
         "pins": pins,
         "frame_url": frame_url,
-        "map_mode": "place" if len(coordinates) == 1 else "view",
+        "map_mode": "view",
         "embed_note": (
             "Google Maps Embed API is used for Gemini Enterprise compatibility. "
             "Multiple returned records are listed below the map; the iframe uses "

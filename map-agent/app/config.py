@@ -228,13 +228,21 @@ def get_google_maps_api_key() -> str | None:
             f"/secrets/{_MAPS_SECRET_NAME}/versions/latest"
         )
 
+        errors: list[tuple[str, Exception]] = []
         for name in secret_names:
             try:
                 response = client.access_secret_version(request={"name": name})
                 _cached_maps_api_key = response.payload.data.decode("UTF-8")
                 return _cached_maps_api_key
-            except Exception:
-                logger.warning("Failed to fetch Maps API key from %s", name, exc_info=True)
+            except Exception as exc:
+                errors.append((name, exc))
+
+        for name, exc in errors:
+            logger.warning(
+                "Failed to fetch Maps API key from %s: %s",
+                name,
+                exc,
+            )
     except Exception:
         logger.warning(
             "Failed to fetch Maps API key from Secret Manager", exc_info=True

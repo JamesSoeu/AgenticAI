@@ -121,7 +121,8 @@ def test_search_map_records_uses_table_schemas_and_planner_sql(
     sql = client.query.call_args.args[0]
     assert "FROM `project-id.transportation.crash_data`" in sql
     assert "UNION ALL" not in sql
-    assert result["all_bridges_map"]["map_mode"] == "place"
+    assert result["all_bridges_map"]["map_mode"] == "view"
+    _mock_embed_url.assert_called_once_with(center="39.9612,-82.9988", zoom=17)
 
 
 @patch("app.bridge_tools.MAP_BIGQUERY_TABLES", MAP_TABLES)

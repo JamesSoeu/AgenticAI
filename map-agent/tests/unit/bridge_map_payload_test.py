@@ -11,8 +11,8 @@ ROOT = Path(__file__).parents[2]
 EXPECTED_MAP = {
     "center": {"lat": 38.9351, "lng": -83.4596},
     "zoom": 14,
-    "frame_url": "https://www.google.com/maps/embed/v1/place?key=EXAMPLE_MAPS_KEY&q=38.9351%2C-83.4596",
-    "map_mode": "place",
+    "frame_url": "https://www.google.com/maps/embed/v1/view?key=EXAMPLE_MAPS_KEY&center=38.9351%2C-83.4596&zoom=17",
+    "map_mode": "view",
     "pins": [
         {
             "lat": 38.9351,
