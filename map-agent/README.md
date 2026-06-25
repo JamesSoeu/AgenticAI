@@ -18,8 +18,9 @@ and JavaScript.
 Map rendering behavior:
 
 - One returned record renders one pinned Google Maps `place` iframe.
-- Multiple returned records render one pinned Google Maps `place` iframe per
-  record, with the record details shown in the same section.
+- Multiple returned records render one separate interactive A2UI surface per
+  record. Each surface contains that record's details and one pinned Google
+  Maps `place` iframe.
 - This avoids directions routes and avoids unsupported custom JavaScript pins.
 
 ## Configure

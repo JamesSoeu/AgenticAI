@@ -55,71 +55,56 @@ def _record_map_url(map_data: dict | None, index: int) -> str | None:
     return record_maps[index - 1].get("frame_url")
 
 
-def _component_ids(records: list[dict], map_data: dict | None) -> list[str]:
-    ids = ["results-header", "results-summary"]
-    for index, record in enumerate(records, start=1):
-        ids.append(f"divider-{index}")
-        ids.append(f"record-{index}-header")
-        ids.extend(f"record-{index}-{key}" for key, _ in _record_lines(record))
-        if _record_map_url(map_data, index):
-            ids.append(f"record-{index}-map")
+def _record_component_ids(record: dict, index: int, map_url: str | None) -> list[str]:
+    ids = ["results-header", f"record-{index}-header"]
+    ids.extend(f"record-{index}-{key}" for key, _ in _record_lines(record))
+    if map_url:
+        ids.append(f"record-{index}-map")
     return ids
 
 
 def _build_v08(
     records: list[dict], map_data: dict | None, surface_id: str
 ) -> list[dict]:
-    component_ids = _component_ids(records, map_data)
-    components = [
-        {
-            "id": "root-column",
-            "component": {
-                "Column": {
-                    "children": {"explicitList": component_ids},
-                    "distribution": "start",
-                    "alignment": "stretch",
-                }
-            },
-        },
-        {
-            "id": "results-header",
-            "component": {
-                "Text": {
-                    "text": {"literalString": "Map Search Results"},
-                    "usageHint": "h2",
-                }
-            },
-        },
-        {
-            "id": "results-summary",
-            "component": {
-                "Text": {
-                    "text": {
-                        "literalString": f"Found {len(records)} matching map records."
-                    },
-                    "usageHint": "body",
-                }
-            },
-        },
-    ]
+    messages: list[dict] = []
     for index, record in enumerate(records, start=1):
-        components.extend(
-            [
-                {
-                    "id": f"divider-{index}",
-                    "component": {"Divider": {"axis": "horizontal"}},
+        record_surface_id = f"{surface_id}-{index}"
+        map_url = _record_map_url(map_data, index)
+        component_ids = _record_component_ids(record, index, map_url)
+        components = [
+            {
+                "id": "root-column",
+                "component": {
+                    "Column": {
+                        "children": {"explicitList": component_ids},
+                        "distribution": "start",
+                        "alignment": "stretch",
+                    }
                 },
-                {
-                    "id": f"record-{index}-header",
-                    "component": {
-                        "Text": {
-                            "text": {"literalString": _record_heading(index, record)},
-                            "usageHint": "h3",
-                        }
-                    },
+            },
+            {
+                "id": "results-header",
+                "component": {
+                    "Text": {
+                        "text": {
+                            "literalString": (
+                                f"Map Search Result {index} of {len(records)}"
+                            )
+                        },
+                        "usageHint": "h2",
+                    }
                 },
-            ]
-            )
+            },
+            {
+                "id": f"record-{index}-header",
+                "component": {
+                    "Text": {
+                        "text": {"literalString": _record_heading(index, record)},
+                        "usageHint": "h3",
+                    }
+                },
+            },
+        ]
         for key, text in _record_lines(record):
             components.append(
                 {
@@ -132,7 +117,6 @@ def _build_v08(
                     },
                 }
             )
-        map_url = _record_map_url(map_data, index)
         if map_url:
             components.append(
                 {
@@ -144,11 +128,14 @@ def _build_v08(
                     },
                 }
             )
+        messages.extend(
+            [
+                {"beginRendering": {"surfaceId": record_surface_id, "root": "root-column"}},
+                {"surfaceUpdate": {"surfaceId": record_surface_id, "components": components}},
+            ]
+        )
 
-    return [
-        {"beginRendering": {"surfaceId": surface_id, "root": "root-column"}},
-        {"surfaceUpdate": {"surfaceId": surface_id, "components": components}},
-    ]
+    return messages
 
 
 def _build_v09(
@@ -157,43 +144,32 @@ def _build_v09(
     surface_id: str,
     catalog_id: str,
 ) -> list[dict]:
-    component_ids = _component_ids(records, map_data)
-    components = [
-        {
-            "id": "root",
-            "component": "Column",
-            "justify": "start",
-            "align": "stretch",
-            "children": component_ids,
-        },
-        {
-            "id": "results-header",
-            "component": "Text",
-            "variant": "h2",
-            "text": "Map Search Results",
-        },
-        {
-            "id": "results-summary",
-            "component": "Text",
-            "text": f"Found {len(records)} matching map records.",
-        },
-    ]
+    messages: list[dict] = []
     for index, record in enumerate(records, start=1):
-        components.extend(
-            [
-                {
-                    "id": f"divider-{index}",
-                    "component": "Divider",
-                    "axis": "horizontal",
-                },
-                {
-                    "id": f"record-{index}-header",
-                    "component": "Text",
-                    "variant": "h3",
-                    "text": _record_heading(index, record),
-                },
-            ]
-        )
+        record_surface_id = f"{surface_id}-{index}"
+        map_url = _record_map_url(map_data, index)
+        component_ids = _record_component_ids(record, index, map_url)
+        components = [
+            {
+                "id": "root",
+                "component": "Column",
+                "justify": "start",
+                "align": "stretch",
+                "children": component_ids,
+            },
+            {
+                "id": "results-header",
+                "component": "Text",
+                "variant": "h2",
+                "text": f"Map Search Result {index} of {len(records)}",
+            },
+            {
+                "id": f"record-{index}-header",
+                "component": "Text",
+                "variant": "h3",
+                "text": _record_heading(index, record),
+            },
+        ]
         for key, text in _record_lines(record):
             components.append(
                 {
@@ -202,7 +178,6 @@ def _build_v09(
                     "text": text,
                 }
             )
-        map_url = _record_map_url(map_data, index)
         if map_url:
             components.append(
                 {
@@ -211,17 +186,26 @@ def _build_v09(
                     "url": map_url,
                 }
             )
+        messages.extend(
+            [
+                {
+                    "version": "v0.9",
+                    "createSurface": {
+                        "surfaceId": record_surface_id,
+                        "catalogId": catalog_id,
+                    },
+                },
+                {
+                    "version": "v0.9",
+                    "updateComponents": {
+                        "surfaceId": record_surface_id,
+                        "components": components,
+                    },
+                },
+            ]
+        )
 
-    return [
-        {
-            "version": "v0.9",
-            "createSurface": {"surfaceId": surface_id, "catalogId": catalog_id},
-        },
-        {
-            "version": "v0.9",
-            "updateComponents": {"surfaceId": surface_id, "components": components},
-        },
-    ]
+    return messages
 
 
 def build_bridge_a2ui(

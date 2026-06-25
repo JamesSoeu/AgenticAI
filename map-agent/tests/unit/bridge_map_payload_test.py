@@ -112,3 +112,42 @@ def test_deterministic_payloads_validate_for_both_supported_versions():
         catalog.validator.validate(messages)
         assert "WebFrameUrl" in str(messages)
         assert "place?key=EXAMPLE_MAPS_KEY" in str(messages)
+
+
+def test_v09_payload_creates_one_surface_per_map_record():
+    records = [
+        {
+            "latitude": 38.9351 + index,
+            "longitude": -83.4596 - index,
+            "title": f"Bridge {index}",
+            "description": f"Bridge location {index}",
+            "source_table": "bridge",
+        }
+        for index in range(3)
+    ]
+    map_data = {
+        "record_maps": [
+            {
+                "frame_url": (
+                    "https://www.google.com/maps/embed/v1/place?"
+                    f"key=EXAMPLE_MAPS_KEY&q={record['latitude']}%2C{record['longitude']}"
+                )
+            }
+            for record in records
+        ]
+    }
+    agent = BridgeInventoryAgent(base_url="http://localhost:8000")
+    catalog = agent.get_schema_manager("0.9").get_selected_catalog()
+
+    messages = build_bridge_a2ui(
+        records,
+        map_data,
+        version="0.9",
+        catalog_id=catalog.catalog_id,
+    )
+
+    assert sum("createSurface" in message for message in messages) == 3
+    assert sum("updateComponents" in message for message in messages) == 3
+    assert str(messages).count("WebFrameUrl") == 3
+    assert "Map Search Result 1 of 3" in str(messages)
+    assert "Map Search Result 3 of 3" in str(messages)

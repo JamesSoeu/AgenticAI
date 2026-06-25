@@ -223,7 +223,7 @@ def test_search_map_records_returns_render_ready_a2ui_for_gemini_enterprise(
     messages = result["validated_a2ui_json"]
     assert "beginRendering" in messages[0]
     assert "surfaceUpdate" in messages[1]
-    assert "Map Search Results" in str(messages)
+    assert "Map Search Result 1 of 1" in str(messages)
     assert "WebFrameUrl" in str(messages)
     assert "https://www.google.com/maps/embed/v1/place?" in str(messages)
     assert "directions" not in str(messages)
@@ -271,7 +271,7 @@ def test_search_map_records_returns_a2ui_without_tool_context(
 
     assert result["status"] == "success"
     assert "validated_a2ui_json" in result
-    assert "Map Search Results" in str(result["validated_a2ui_json"])
+    assert "Map Search Result 1 of 1" in str(result["validated_a2ui_json"])
     assert "WebFrameUrl" in str(result["validated_a2ui_json"])
 
 
