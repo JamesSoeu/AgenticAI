@@ -6,6 +6,7 @@ SERVICE_NAME="${SERVICE_NAME:-gemini-enterprise-bridge-map}"
 REGION="${REGION:-us-central1}"
 PROJECT_ID="${PROJECT_ID:-$(gcloud config get-value project 2>/dev/null)}"
 MAPS_SECRET="${GOOGLE_MAPS_SECRET_NAME:-google_map_api_key}"
+MAPS_SECRET_LOCATION="${GOOGLE_MAPS_SECRET_LOCATION:-}"
 RUNTIME_SA_NAME="${RUNTIME_SA_NAME:-bridge-map-agent-sa}"
 MODEL="${MODEL:-gemini-3.5-flash}"
 MAP_BIGQUERY_TABLES="${MAP_BIGQUERY_TABLES:-${BRIDGE_BIGQUERY_TABLES:-${BRIDGE_BIGQUERY_TABLE:-your-project-id.transportation.bridge_data}}}"
@@ -72,18 +73,37 @@ gcloud projects add-iam-policy-binding "${MAP_DATA_PROJECT}" \
   --condition=None \
   --quiet >/dev/null
 
-if ! gcloud secrets describe "${MAPS_SECRET}" --project "${PROJECT_ID}" >/dev/null 2>&1; then
+if [[ -n "${MAPS_SECRET_LOCATION}" ]]; then
+  describe_secret_args=(secrets describe "${MAPS_SECRET}" --location "${MAPS_SECRET_LOCATION}" --project "${PROJECT_ID}")
+else
+  describe_secret_args=(secrets describe "${MAPS_SECRET}" --project "${PROJECT_ID}")
+fi
+
+if ! gcloud "${describe_secret_args[@]}" >/dev/null 2>&1; then
   echo "Missing Secret Manager secret: ${MAPS_SECRET}" >&2
   echo "Create it with:" >&2
-  echo "  printf '%s' \"YOUR_MAPS_API_KEY\" | gcloud secrets create ${MAPS_SECRET} --data-file=- --replication-policy=automatic --project ${PROJECT_ID}" >&2
+  if [[ -n "${MAPS_SECRET_LOCATION}" ]]; then
+    echo "  printf '%s' \"YOUR_MAPS_API_KEY\" | gcloud secrets create ${MAPS_SECRET} --data-file=- --location ${MAPS_SECRET_LOCATION} --project ${PROJECT_ID}" >&2
+  else
+    echo "  printf '%s' \"YOUR_MAPS_API_KEY\" | gcloud secrets create ${MAPS_SECRET} --data-file=- --replication-policy=automatic --project ${PROJECT_ID}" >&2
+  fi
   exit 1
 fi
 
-gcloud secrets add-iam-policy-binding "${MAPS_SECRET}" \
-  --member "serviceAccount:${RUNTIME_SA}" \
-  --role "roles/secretmanager.secretAccessor" \
-  --project "${PROJECT_ID}" \
-  --quiet >/dev/null
+if [[ -n "${MAPS_SECRET_LOCATION}" ]]; then
+  gcloud secrets add-iam-policy-binding "${MAPS_SECRET}" \
+    --location "${MAPS_SECRET_LOCATION}" \
+    --member "serviceAccount:${RUNTIME_SA}" \
+    --role "roles/secretmanager.secretAccessor" \
+    --project "${PROJECT_ID}" \
+    --quiet >/dev/null
+else
+  gcloud secrets add-iam-policy-binding "${MAPS_SECRET}" \
+    --member "serviceAccount:${RUNTIME_SA}" \
+    --role "roles/secretmanager.secretAccessor" \
+    --project "${PROJECT_ID}" \
+    --quiet >/dev/null
+fi
 
 echo "Deploying ${SERVICE_NAME} to Cloud Run..."
 gcloud run deploy "${SERVICE_NAME}" \
@@ -94,8 +114,7 @@ gcloud run deploy "${SERVICE_NAME}" \
   --memory 2Gi \
   --no-allow-unauthenticated \
   --no-cpu-throttling \
-  --set-secrets "GOOGLE_MAPS_API_KEY=${MAPS_SECRET}:latest" \
-  --set-env-vars "GOOGLE_CLOUD_PROJECT=${PROJECT_ID},GOOGLE_CLOUD_LOCATION=global,GOOGLE_GENAI_USE_VERTEXAI=true,MODEL=${MODEL},MAP_BIGQUERY_TABLES=${MAP_BIGQUERY_TABLES},MAP_BIGQUERY_TABLE_ALIASES=${MAP_BIGQUERY_TABLE_ALIASES},MAP_BIGQUERY_MAX_BYTES_BILLED=${MAP_BIGQUERY_MAX_BYTES_BILLED},MAP_DEFAULT_LIMIT=${MAP_DEFAULT_LIMIT},MAP_MAX_LIMIT=${MAP_MAX_LIMIT},BIGQUERY_JOB_PROJECT=${PROJECT_ID},BIGQUERY_LOCATION=${BIGQUERY_LOCATION}" \
+  --set-env-vars "GOOGLE_CLOUD_PROJECT=${PROJECT_ID},GOOGLE_CLOUD_LOCATION=global,GOOGLE_GENAI_USE_VERTEXAI=true,MODEL=${MODEL},MAP_BIGQUERY_TABLES=${MAP_BIGQUERY_TABLES},MAP_BIGQUERY_TABLE_ALIASES=${MAP_BIGQUERY_TABLE_ALIASES},MAP_BIGQUERY_MAX_BYTES_BILLED=${MAP_BIGQUERY_MAX_BYTES_BILLED},MAP_DEFAULT_LIMIT=${MAP_DEFAULT_LIMIT},MAP_MAX_LIMIT=${MAP_MAX_LIMIT},BIGQUERY_JOB_PROJECT=${PROJECT_ID},BIGQUERY_LOCATION=${BIGQUERY_LOCATION},GOOGLE_MAPS_SECRET_NAME=${MAPS_SECRET},GOOGLE_MAPS_SECRET_LOCATION=${MAPS_SECRET_LOCATION}" \
   --quiet
 
 SERVICE_URL="$(gcloud run services describe "${SERVICE_NAME}" \

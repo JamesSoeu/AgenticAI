@@ -188,6 +188,8 @@ MAP_MAX_LIMIT: int = int(os.getenv("MAP_MAX_LIMIT", "50"))
 # Google Maps
 # ---------------------------------------------------------------------------
 _MAPS_SECRET_NAME: str = os.getenv("GOOGLE_MAPS_SECRET_NAME", "google_map_api_key")
+_MAPS_SECRET_LOCATION: str = os.getenv("GOOGLE_MAPS_SECRET_LOCATION", "")
+_MAPS_SECRET_RESOURCE: str = os.getenv("GOOGLE_MAPS_SECRET_RESOURCE", "")
 
 
 _cached_maps_api_key: str | None = None
@@ -212,13 +214,27 @@ def get_google_maps_api_key() -> str | None:
         from google.cloud import secretmanager
 
         client = secretmanager.SecretManagerServiceClient()
-        name = (
+        secret_names: list[str] = []
+        if _MAPS_SECRET_RESOURCE:
+            secret_names.append(_MAPS_SECRET_RESOURCE)
+        if _MAPS_SECRET_LOCATION:
+            secret_names.append(
+                f"projects/{GOOGLE_CLOUD_PROJECT}"
+                f"/locations/{_MAPS_SECRET_LOCATION}"
+                f"/secrets/{_MAPS_SECRET_NAME}/versions/latest"
+            )
+        secret_names.append(
             f"projects/{GOOGLE_CLOUD_PROJECT}"
             f"/secrets/{_MAPS_SECRET_NAME}/versions/latest"
         )
-        response = client.access_secret_version(request={"name": name})
-        _cached_maps_api_key = response.payload.data.decode("UTF-8")
-        return _cached_maps_api_key
+
+        for name in secret_names:
+            try:
+                response = client.access_secret_version(request={"name": name})
+                _cached_maps_api_key = response.payload.data.decode("UTF-8")
+                return _cached_maps_api_key
+            except Exception:
+                logger.warning("Failed to fetch Maps API key from %s", name, exc_info=True)
     except Exception:
         logger.warning(
             "Failed to fetch Maps API key from Secret Manager", exc_info=True

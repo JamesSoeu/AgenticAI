@@ -229,6 +229,50 @@ def test_search_map_records_returns_render_ready_a2ui_for_gemini_enterprise(
     assert tool_context.actions.skip_summarization is True
 
 
+@patch("app.bridge_tools.MAP_BIGQUERY_TABLES", MAP_TABLES)
+@patch(
+    "app.bridge_tools.build_maps_embed_url",
+    return_value="https://www.google.com/maps/embed/v1/place?key=test&q=39.9612%2C-82.9988",
+)
+@patch("app.bridge_tools._call_gemini_sql_planner")
+@patch("app.bridge_tools.bigquery.Client")
+def test_search_map_records_returns_a2ui_without_tool_context(
+    mock_client_class,
+    mock_planner,
+    _mock_embed_url,
+):
+    client = _configure_client(mock_client_class)
+    mock_planner.return_value = {
+        "sql": """
+            SELECT
+              SAFE_CAST(LATITUDE_DD AS FLOAT64) AS latitude,
+              SAFE_CAST(LONGITUDE_DD AS FLOAT64) AS longitude,
+              CAST(SFN AS STRING) AS title,
+              CAST(STR_LOC AS STRING) AS description,
+              'bridge' AS source_table
+            FROM `project-id.transportation.bridge_data`
+            LIMIT 1
+        """,
+        "reason": "Bridge table has coordinates.",
+    }
+    client.query.return_value.result.return_value = [
+        {
+            "latitude": 39.9612,
+            "longitude": -82.9988,
+            "title": "1234567",
+            "description": "Main Street bridge",
+            "source_table": "bridge",
+        }
+    ]
+
+    result = search_map_records("show bridge 1234567 on a map")
+
+    assert result["status"] == "success"
+    assert "validated_a2ui_json" in result
+    assert "Map Search Results" in str(result["validated_a2ui_json"])
+    assert "WebFrameUrl" in str(result["validated_a2ui_json"])
+
+
 @patch("app.bridge_tools.bigquery.Client")
 def test_search_map_records_returns_safe_error(mock_client_class):
     mock_client_class.side_effect = RuntimeError("permission denied")

@@ -10,7 +10,8 @@ def test_cloud_run_deploy_binds_maps_secret_and_gemini_enterprise_invoker():
     script = (ROOT / "scripts" / "deploy_cloud_run.sh").read_text()
 
     assert "--no-allow-unauthenticated" in script
-    assert "GOOGLE_MAPS_API_KEY=${MAPS_SECRET}:latest" in script
+    assert "GOOGLE_MAPS_SECRET_NAME=${MAPS_SECRET}" in script
+    assert "GOOGLE_MAPS_SECRET_LOCATION=${MAPS_SECRET_LOCATION}" in script
     assert "gcp-sa-discoveryengine.iam.gserviceaccount.com" in script
     assert 'roles/bigquery.jobUser' in script
     assert 'roles/bigquery.dataViewer' in script
@@ -31,7 +32,8 @@ def test_powershell_deploy_matches_cloud_run_contract():
     script = (ROOT / "scripts" / "deploy_cloud_run.ps1").read_text()
 
     assert "--no-allow-unauthenticated" in script
-    assert "GOOGLE_MAPS_API_KEY=$MapsSecret`:latest" in script
+    assert "GOOGLE_MAPS_SECRET_NAME=$MapsSecret" in script
+    assert "GOOGLE_MAPS_SECRET_LOCATION=$MapsSecretLocation" in script
     assert "roles/bigquery.jobUser" in script
     assert "roles/bigquery.dataViewer" in script
     assert "gcp-sa-discoveryengine.iam.gserviceaccount.com" in script
@@ -51,3 +53,4 @@ def test_powershell_verify_and_registration_scripts_exist():
     assert "agent-starter-pack@0.41.3" in register
     assert "WriteAllText" in secret
     assert "secrets versions add" in secret
+    assert "MapsSecretLocation" in secret

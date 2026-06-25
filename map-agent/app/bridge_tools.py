@@ -364,6 +364,8 @@ def search_map_records(
                 "Google Maps Embed iframe. Do not create a directions route."
             ),
         }
+        if records:
+            result["validated_a2ui_json"] = build_bridge_a2ui(records, map_data)
         if records and tool_context is not None:
             catalog = tool_context.state.get(A2UI_CATALOG_KEY)
             catalog_id = getattr(catalog, "catalog_id", None)

@@ -39,6 +39,7 @@ MAP_DEFAULT_LIMIT: "10"
 MAP_MAX_LIMIT: "50"
 BIGQUERY_JOB_PROJECT: "YOUR_PROJECT_ID"
 GOOGLE_MAPS_SECRET_NAME: "google_map_api_key"
+GOOGLE_MAPS_SECRET_LOCATION: "us-central1"
 ```
 
 `MAP_BIGQUERY_TABLES` accepts comma-separated BigQuery table IDs in either

@@ -4,6 +4,7 @@ param(
     [string]$Region = $(if ($env:REGION) { $env:REGION } else { "us-central1" }),
     [string]$ServiceName = $(if ($env:SERVICE_NAME) { $env:SERVICE_NAME } else { "gemini-enterprise-bridge-map" }),
     [string]$MapsSecret = $(if ($env:GOOGLE_MAPS_SECRET_NAME) { $env:GOOGLE_MAPS_SECRET_NAME } else { "google_map_api_key" }),
+    [string]$MapsSecretLocation = $env:GOOGLE_MAPS_SECRET_LOCATION,
     [string]$RuntimeServiceAccountName = $(if ($env:RUNTIME_SA_NAME) { $env:RUNTIME_SA_NAME } else { "bridge-map-agent-sa" }),
     [string]$Model = $(if ($env:MODEL) { $env:MODEL } else { "gemini-3.5-flash" }),
     [string]$MapBigQueryTables = $(if ($env:MAP_BIGQUERY_TABLES) { $env:MAP_BIGQUERY_TABLES } elseif ($env:BRIDGE_BIGQUERY_TABLES) { $env:BRIDGE_BIGQUERY_TABLES } elseif ($env:BRIDGE_BIGQUERY_TABLE) { $env:BRIDGE_BIGQUERY_TABLE } else { "your-project-id.transportation.bridge_data" }),
@@ -90,20 +91,35 @@ Invoke-GCloud projects add-iam-policy-binding $MapDataProject `
     --condition=None `
     --quiet
 
-& gcloud secrets describe $MapsSecret --project $ProjectId *> $null
+if ($MapsSecretLocation) {
+    & gcloud secrets describe $MapsSecret --location $MapsSecretLocation --project $ProjectId *> $null
+}
+else {
+    & gcloud secrets describe $MapsSecret --project $ProjectId *> $null
+}
 if ($LASTEXITCODE -ne 0) {
     throw @"
 Missing Secret Manager secret: $MapsSecret
 Create it from PowerShell:
-  .\scripts\set_maps_secret.ps1 -ProjectId $ProjectId -MapsApiKey "YOUR_MAPS_API_KEY"
+  .\scripts\set_maps_secret.ps1 -ProjectId $ProjectId -MapsApiKey "YOUR_MAPS_API_KEY" -MapsSecretLocation "$MapsSecretLocation"
 "@
 }
 
-Invoke-GCloud secrets add-iam-policy-binding $MapsSecret `
-    --member "serviceAccount:$RuntimeServiceAccount" `
-    --role "roles/secretmanager.secretAccessor" `
-    --project $ProjectId `
-    --quiet
+if ($MapsSecretLocation) {
+    Invoke-GCloud secrets add-iam-policy-binding $MapsSecret `
+        --location $MapsSecretLocation `
+        --member "serviceAccount:$RuntimeServiceAccount" `
+        --role "roles/secretmanager.secretAccessor" `
+        --project $ProjectId `
+        --quiet
+}
+else {
+    Invoke-GCloud secrets add-iam-policy-binding $MapsSecret `
+        --member "serviceAccount:$RuntimeServiceAccount" `
+        --role "roles/secretmanager.secretAccessor" `
+        --project $ProjectId `
+        --quiet
+}
 
 $EnvironmentVariables = @(
     "GOOGLE_CLOUD_PROJECT=$ProjectId"
@@ -117,6 +133,8 @@ $EnvironmentVariables = @(
     "MAP_MAX_LIMIT=$MapMaxLimit"
     "BIGQUERY_JOB_PROJECT=$ProjectId"
     "BIGQUERY_LOCATION=$BigQueryLocation"
+    "GOOGLE_MAPS_SECRET_NAME=$MapsSecret"
+    "GOOGLE_MAPS_SECRET_LOCATION=$MapsSecretLocation"
 ) -join ","
 
 Write-Host "Deploying $ServiceName to Cloud Run..."
@@ -128,7 +146,6 @@ Invoke-GCloud run deploy $ServiceName `
     --memory 2Gi `
     --no-allow-unauthenticated `
     --no-cpu-throttling `
-    --set-secrets "GOOGLE_MAPS_API_KEY=$MapsSecret`:latest" `
     --set-env-vars $EnvironmentVariables `
     --quiet
 

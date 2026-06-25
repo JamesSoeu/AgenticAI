@@ -47,6 +47,8 @@ MAP_BIGQUERY_TABLE_ALIASES: "bridge,crash,road,traffic,asset"
 MAP_BIGQUERY_MAX_BYTES_BILLED: "1000000000"
 MAP_DEFAULT_LIMIT: "10"
 MAP_MAX_LIMIT: "50"
+GOOGLE_MAPS_SECRET_NAME: "google_map_api_key"
+GOOGLE_MAPS_SECRET_LOCATION: "us-central1"
 ```
 
 `MAP_BIGQUERY_TABLES` can contain five tables, or more if needed. The aliases
