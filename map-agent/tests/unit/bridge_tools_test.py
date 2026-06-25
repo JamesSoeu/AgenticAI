@@ -68,7 +68,7 @@ def _configure_client(mock_client_class):
 @patch("app.bridge_tools.MAP_BIGQUERY_TABLES", MAP_TABLES)
 @patch(
     "app.bridge_tools.build_maps_embed_url",
-    return_value="https://www.google.com/maps/embed/v1/view?key=test&center=39.961%2C-82.999&zoom=11",
+    return_value="https://www.google.com/maps/embed/v1/place?key=test&q=39.9612%2C-82.9988",
 )
 @patch("app.bridge_tools._call_gemini_sql_planner")
 @patch("app.bridge_tools.bigquery.Client")
@@ -121,8 +121,9 @@ def test_search_map_records_uses_table_schemas_and_planner_sql(
     sql = client.query.call_args.args[0]
     assert "FROM `project-id.transportation.crash_data`" in sql
     assert "UNION ALL" not in sql
-    assert result["all_bridges_map"]["map_mode"] == "view"
-    _mock_embed_url.assert_called_once_with(center="39.9612,-82.9988", zoom=17)
+    assert result["all_bridges_map"]["map_mode"] == "place-per-record"
+    assert result["all_bridges_map"]["record_maps"][0]["title"] == "C-100"
+    _mock_embed_url.assert_called_once_with(query="39.9612,-82.9988")
 
 
 @patch("app.bridge_tools.MAP_BIGQUERY_TABLES", MAP_TABLES)

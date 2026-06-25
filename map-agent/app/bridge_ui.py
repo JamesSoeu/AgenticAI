@@ -46,21 +46,30 @@ def _record_heading(index: int, record: dict) -> str:
     return f"Record {index}: {title}"
 
 
-def _component_ids(records: list[dict], include_map: bool) -> list[str]:
+def _record_map_url(map_data: dict | None, index: int) -> str | None:
+    if not map_data:
+        return None
+    record_maps = map_data.get("record_maps") or []
+    if index - 1 >= len(record_maps):
+        return None
+    return record_maps[index - 1].get("frame_url")
+
+
+def _component_ids(records: list[dict], map_data: dict | None) -> list[str]:
     ids = ["results-header", "results-summary"]
-    if include_map:
-        ids.append("map-frame")
     for index, record in enumerate(records, start=1):
         ids.append(f"divider-{index}")
         ids.append(f"record-{index}-header")
         ids.extend(f"record-{index}-{key}" for key, _ in _record_lines(record))
+        if _record_map_url(map_data, index):
+            ids.append(f"record-{index}-map")
     return ids
 
 
 def _build_v08(
     records: list[dict], map_data: dict | None, surface_id: str
 ) -> list[dict]:
-    component_ids = _component_ids(records, bool(map_data))
+    component_ids = _component_ids(records, map_data)
     components = [
         {
             "id": "root-column",
@@ -93,18 +102,6 @@ def _build_v08(
             },
         },
     ]
-    if map_data:
-        components.append(
-            {
-                "id": "map-frame",
-                "component": {
-                    "WebFrameUrl": {
-                        "url": {"literalString": map_data["frame_url"]}
-                    }
-                },
-            }
-        )
-
     for index, record in enumerate(records, start=1):
         components.extend(
             [
@@ -122,7 +119,7 @@ def _build_v08(
                     },
                 },
             ]
-        )
+            )
         for key, text in _record_lines(record):
             components.append(
                 {
@@ -131,6 +128,18 @@ def _build_v08(
                         "Text": {
                             "text": {"literalString": text},
                             "usageHint": "body",
+                        }
+                    },
+                }
+            )
+        map_url = _record_map_url(map_data, index)
+        if map_url:
+            components.append(
+                {
+                    "id": f"record-{index}-map",
+                    "component": {
+                        "WebFrameUrl": {
+                            "url": {"literalString": map_url}
                         }
                     },
                 }
@@ -148,7 +157,7 @@ def _build_v09(
     surface_id: str,
     catalog_id: str,
 ) -> list[dict]:
-    component_ids = _component_ids(records, bool(map_data))
+    component_ids = _component_ids(records, map_data)
     components = [
         {
             "id": "root",
@@ -169,15 +178,6 @@ def _build_v09(
             "text": f"Found {len(records)} matching map records.",
         },
     ]
-    if map_data:
-        components.append(
-            {
-                "id": "map-frame",
-                "component": "WebFrameUrl",
-                "url": map_data["frame_url"],
-            }
-        )
-
     for index, record in enumerate(records, start=1):
         components.extend(
             [
@@ -200,6 +200,15 @@ def _build_v09(
                     "id": f"record-{index}-{key}",
                     "component": "Text",
                     "text": text,
+                }
+            )
+        map_url = _record_map_url(map_data, index)
+        if map_url:
+            components.append(
+                {
+                    "id": f"record-{index}-map",
+                    "component": "WebFrameUrl",
+                    "url": map_url,
                 }
             )
 

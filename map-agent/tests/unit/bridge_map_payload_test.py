@@ -11,8 +11,7 @@ ROOT = Path(__file__).parents[2]
 EXPECTED_MAP = {
     "center": {"lat": 38.9351, "lng": -83.4596},
     "zoom": 14,
-    "frame_url": "https://www.google.com/maps/embed/v1/view?key=EXAMPLE_MAPS_KEY&center=38.9351%2C-83.4596&zoom=17",
-    "map_mode": "view",
+    "map_mode": "place-per-record",
     "pins": [
         {
             "lat": 38.9351,
@@ -22,6 +21,15 @@ EXPECTED_MAP = {
                 "Route: SR-1 | Feature: Creek | "
                 "Location: Location | County: 001"
             ),
+        }
+    ],
+    "record_maps": [
+        {
+            "lat": 38.9351,
+            "lng": -83.4596,
+            "title": "Bridge 1: SFN 1",
+            "description": "Location",
+            "frame_url": "https://www.google.com/maps/embed/v1/place?key=EXAMPLE_MAPS_KEY&q=38.9351%2C-83.4596",
         }
     ],
 }
@@ -102,3 +110,5 @@ def test_deterministic_payloads_validate_for_both_supported_versions():
             catalog_id=catalog.catalog_id,
         )
         catalog.validator.validate(messages)
+        assert "WebFrameUrl" in str(messages)
+        assert "place?key=EXAMPLE_MAPS_KEY" in str(messages)

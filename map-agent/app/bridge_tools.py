@@ -131,30 +131,32 @@ def _build_map_data(records: list[dict[str, Any]]) -> dict | None:
     ]
 
     zoom = _zoom_for_coordinates(coordinate_pairs)
-    if len(coordinates) == 1:
-        latitude, longitude, record = coordinates[0]
-        frame_url = build_maps_embed_url(
-            center=f"{latitude},{longitude}",
-            zoom=17,
+    record_maps = []
+    for latitude, longitude, record in coordinates:
+        frame_url = build_maps_embed_url(query=f"{latitude},{longitude}")
+        if not frame_url:
+            return None
+        record_maps.append(
+            {
+                "lat": latitude,
+                "lng": longitude,
+                "title": _clean_map_text(record.get("title")),
+                "description": _clean_map_text(record.get("description")),
+                "frame_url": frame_url,
+            }
         )
-    else:
-        frame_url = build_maps_embed_url(
-            center=f"{center['lat']},{center['lng']}",
-            zoom=zoom,
-        )
-    if not frame_url:
-        return None
 
     return {
         "center": center,
         "zoom": zoom,
         "pins": pins,
-        "frame_url": frame_url,
-        "map_mode": "view",
+        "record_maps": record_maps,
+        "map_mode": "place-per-record",
         "embed_note": (
             "Google Maps Embed API is used for Gemini Enterprise compatibility. "
-            "Multiple returned records are listed below the map; the iframe uses "
-            "a centered map view instead of custom JavaScript pins."
+            "Each returned record is displayed with its own pinned place map "
+            "because Google Maps Embed API does not support multiple custom pins "
+            "in one iframe."
         ),
     }
 

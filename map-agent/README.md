@@ -13,8 +13,14 @@ It handles:
 There is no separate frontend folder in this monorepo version. Gemini Enterprise
 is the client that renders the A2UI `WebFrameUrl` response. The map iframe uses
 Google Maps Embed API directly because Gemini Enterprise can block custom HTML
-and JavaScript. Multiple results are listed below the map; the iframe uses a
-centered map view instead of custom JavaScript pins or a directions route.
+and JavaScript.
+
+Map rendering behavior:
+
+- One returned record renders one pinned Google Maps `place` iframe.
+- Multiple returned records render one pinned Google Maps `place` iframe per
+  record, with the record details shown in the same section.
+- This avoids directions routes and avoids unsupported custom JavaScript pins.
 
 ## Configure
 
