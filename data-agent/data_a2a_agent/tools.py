@@ -5,6 +5,13 @@ import re
 from typing import Any
 
 from data_a2a_agent.config import BigQueryTable, load_settings
+from data_a2a_agent.session_keys import A2UI_CATALOG_KEY
+from data_a2a_agent.table_ui import build_bigquery_table_a2ui
+
+try:  # pragma: no cover - google-adk is available in deployed agent runtime.
+    from google.adk.tools.tool_context import ToolContext
+except Exception:  # pragma: no cover - keeps local unit tests dependency-light.
+    ToolContext = Any
 
 
 _BLOCKED_SQL = re.compile(
@@ -66,7 +73,11 @@ def preview_bigquery_table(table_alias: str, limit: int | None = None) -> dict[s
     return run_bigquery_select(sql)
 
 
-def run_bigquery_select(sql: str, limit: int | None = None) -> dict[str, Any]:
+def run_bigquery_select(
+    sql: str,
+    limit: int | None = None,
+    tool_context: ToolContext | None = None,
+) -> dict[str, Any]:
     """Run a read-only SELECT query against the configured BigQuery tables."""
     settings = load_settings()
     clean_sql = _validate_select_sql(sql, settings.bigquery_tables)
@@ -81,11 +92,58 @@ def run_bigquery_select(sql: str, limit: int | None = None) -> dict[str, Any]:
     )
     rows = client.query(clean_sql, job_config=job_config).result()
     data = [dict(row.items()) for row in rows]
-    return {
+    result = {
         "sql": clean_sql,
         "row_count": len(data),
         "rows": data,
+        "markdown_table": rows_to_markdown_table(data),
     }
+    if tool_context is not None:
+        catalog = tool_context.state.get(A2UI_CATALOG_KEY)
+        result["validated_a2ui_json"] = build_bigquery_table_a2ui(
+            rows=data,
+            sql=clean_sql,
+            version=getattr(catalog, "version", None),
+            catalog_id=getattr(catalog, "catalog_id", None),
+        )
+        tool_context.actions.skip_summarization = True
+    return result
+
+
+def rows_to_markdown_table(rows: list[dict[str, Any]], max_rows: int = 50) -> str:
+    """Format query rows as a GitHub-flavored Markdown table."""
+    if not rows:
+        return "_No rows returned._"
+
+    columns = list(rows[0].keys())
+    for row in rows[1:]:
+        for column in row.keys():
+            if column not in columns:
+                columns.append(column)
+
+    visible_rows = rows[: max(max_rows, 1)]
+    header = "| " + " | ".join(_markdown_cell(column) for column in columns) + " |"
+    separator = "| " + " | ".join("---" for _ in columns) + " |"
+    body = [
+        "| "
+        + " | ".join(_markdown_cell(row.get(column)) for column in columns)
+        + " |"
+        for row in visible_rows
+    ]
+    if len(rows) > len(visible_rows):
+        body.append(
+            "| "
+            + " | ".join(
+                _markdown_cell(
+                    f"Showing {len(visible_rows)} of {len(rows)} rows"
+                    if index == 0
+                    else ""
+                )
+                for index, _ in enumerate(columns)
+            )
+            + " |"
+        )
+    return "\n".join([header, separator, *body])
 
 
 def list_gcs_objects(prefix: str | None = None, limit: int = 50) -> dict[str, Any]:
@@ -224,6 +282,16 @@ def search_gcs_pdf_object(
         "matches": matches,
         "truncated": page_limit < total_pages,
     }
+
+
+def _markdown_cell(value: Any) -> str:
+    if value is None:
+        return ""
+    text = str(value)
+    text = text.replace("\\", "\\\\")
+    text = text.replace("|", "\\|")
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
 
 
 def _select_tables(table_aliases: list[str] | None) -> list[BigQueryTable]:

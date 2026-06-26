@@ -1,4 +1,5 @@
 google-adk[a2a]
+a2ui-agent-sdk>=0.1.1
 google-cloud-bigquery>=3.25.0
 google-cloud-storage>=2.18.0
 uvicorn[standard]>=0.30.0

@@ -16,6 +16,7 @@ from data_a2a_agent.tools import (
     run_bigquery_select,
     search_gcs_pdf_object,
 )
+from data_a2a_agent.session_keys import A2UI_CATALOG_KEY
 
 
 settings = load_settings()
@@ -58,6 +59,10 @@ When querying BigQuery:
 - Join tables only when there is a clear key in the schema, such as route, segment,
   asset id, county, date, station, or another documented field.
 - Explain if a request needs a table, column, or file that is not configured.
+- When run_bigquery_select returns tabular rows, include its markdown_table value
+  exactly as a GitHub-flavored Markdown table. Do not put tables inside code
+  fences, block quotes, or indented text. Put a short insight before the table
+  and the SQL/source after the table.
 
 When reading Cloud Storage:
 - Use list_gcs_objects to discover candidate files.
@@ -78,8 +83,14 @@ Good tasks you can help with:
 
 try:
     from a2a.server.apps import A2AStarletteApplication
+    from a2a.server.agent_execution import RequestContext
     from a2a.server.request_handlers import DefaultRequestHandler
     from a2a.server.tasks import InMemoryTaskStore
+    from a2ui.a2a.extension import get_a2ui_agent_extension, try_activate_a2ui_extension
+    from a2ui.adk.send_a2ui_to_client_toolset import A2uiEventConverter
+    from a2ui.basic_catalog.provider import BasicCatalog
+    from a2ui.schema.constants import A2UI_CLIENT_CAPABILITIES_KEY, VERSION_0_8, VERSION_0_9
+    from a2ui.schema.manager import A2uiSchemaManager
     from google.adk import Agent
     from google.adk.a2a.converters.part_converter import convert_a2a_part_to_genai_part
     from google.adk.a2a.converters.request_converter import AgentRunRequest
@@ -90,6 +101,9 @@ try:
         InMemoryCredentialService,
     )
     from google.adk.cli.utils.logs import setup_adk_logger
+    from google.adk.agents.invocation_context import new_invocation_context_id
+    from google.adk.events.event import Event
+    from google.adk.events.event_actions import EventActions
     from google.adk.memory.in_memory_memory_service import InMemoryMemoryService
     from google.adk.runners import RunConfig
     from google.adk.runners import Runner
@@ -101,6 +115,102 @@ except ImportError as exc:  # pragma: no cover - exercised only without dependen
     ) from exc
 
 logger = logging.getLogger(__name__)
+
+_A2UI_EXTENSION_URI_V0_8 = "https://a2ui.org/a2a-extension/a2ui/v0.8"
+
+
+def _build_schema_managers() -> dict[str, A2uiSchemaManager]:
+    return {
+        VERSION_0_8: A2uiSchemaManager(
+            version=VERSION_0_8,
+            catalogs=[BasicCatalog.get_config(version=VERSION_0_8)],
+            accepts_inline_catalogs=True,
+        ),
+        VERSION_0_9: A2uiSchemaManager(
+            version=VERSION_0_9,
+            catalogs=[BasicCatalog.get_config(version=VERSION_0_9)],
+            accepts_inline_catalogs=True,
+        ),
+    }
+
+
+_schema_managers = _build_schema_managers()
+
+
+class _DataTableEventConverter(A2uiEventConverter):
+    """A2UI event converter with ADK-version-compatible call handling."""
+
+    def __call__(
+        self,
+        event,
+        invocation_context,
+        task_id=None,
+        context_id=None,
+        part_converter_func=None,
+    ):
+        kwargs = {
+            "event": event,
+            "invocation_context": invocation_context,
+            "task_id": task_id,
+            "context_id": context_id,
+        }
+        if part_converter_func is not None:
+            kwargs["part_converter_func"] = part_converter_func
+        return super().__call__(**kwargs)
+
+
+class _DataTableA2aAgentExecutor(A2aAgentExecutor):
+    """Executor that activates A2UI table rendering for Gemini Enterprise."""
+
+    def __init__(self, runner):
+        super().__init__(
+            runner=runner,
+            config=A2aAgentExecutorConfig(
+                request_converter=_convert_request_without_part_metadata,
+                event_converter=_DataTableEventConverter(
+                    catalog_key=A2UI_CATALOG_KEY,
+                    bypass_tool_check=True,
+                ),
+            ),
+            use_legacy=True,
+        )
+
+    async def _prepare_session(
+        self,
+        context: RequestContext,
+        run_request: AgentRunRequest,
+        runner: Runner,
+    ):
+        active_ui_version = try_activate_a2ui_extension(context, _agent_card())
+        if not active_ui_version:
+            active_ui_version = VERSION_0_8
+            try:
+                context.add_activated_extension(_A2UI_EXTENSION_URI_V0_8)
+            except Exception:
+                logger.debug("Could not register fallback A2UI extension on context")
+
+        session = await super()._prepare_session(context, run_request, runner)
+        schema_manager = _schema_managers.get(active_ui_version)
+        if schema_manager:
+            capabilities = (
+                context.message.metadata.get(A2UI_CLIENT_CAPABILITIES_KEY)
+                if context.message and context.message.metadata
+                else None
+            )
+            a2ui_catalog = schema_manager.get_selected_catalog(
+                client_ui_capabilities=capabilities
+            )
+            await runner.session_service.append_event(
+                session,
+                Event(
+                    invocation_id=new_invocation_context_id(),
+                    author="system",
+                    actions=EventActions(
+                        state_delta={A2UI_CATALOG_KEY: a2ui_catalog}
+                    ),
+                ),
+            )
+        return session
 
 
 root_agent = Agent(
@@ -183,12 +293,7 @@ def _build_a2a_app() -> Starlette:
         )
 
     task_store = InMemoryTaskStore()
-    agent_executor = A2aAgentExecutor(
-        runner=create_runner,
-        config=A2aAgentExecutorConfig(
-            request_converter=_convert_request_without_part_metadata,
-        ),
-    )
+    agent_executor = _DataTableA2aAgentExecutor(runner=create_runner)
     request_handler = DefaultRequestHandler(
         agent_executor=agent_executor,
         task_store=task_store,
@@ -208,6 +313,15 @@ def _agent_card():
     try:
         from a2a.types import AgentCapabilities, AgentCard, AgentInterface, AgentSkill
 
+        extensions = [
+            get_a2ui_agent_extension(
+                version,
+                manager.accepts_inline_catalogs,
+                manager.supported_catalog_ids,
+            )
+            for version, manager in _schema_managers.items()
+        ]
+
         skill = AgentSkill(
             id="transportation_infrastructure_question_answering",
             name="Transportation Infrastructure Data Question Answering",
@@ -217,7 +331,7 @@ def _agent_card():
                 "configured Google Cloud Storage bucket."
             ),
             input_modes=["text/plain"],
-            output_modes=["text/plain"],
+            output_modes=["text/markdown", "text/plain"],
             tags=[
                 "bigquery",
                 "cloud-storage",
@@ -247,8 +361,12 @@ def _agent_card():
             ),
             "version": "0.1.0",
             "default_input_modes": ["text/plain"],
-            "default_output_modes": ["text/plain"],
-            "capabilities": AgentCapabilities(streaming=True, extended_agent_card=False),
+            "default_output_modes": ["text/markdown", "text/plain"],
+            "capabilities": AgentCapabilities(
+                streaming=True,
+                extended_agent_card=False,
+                extensions=extensions,
+            ),
             "skills": [skill],
         }
 
@@ -282,10 +400,10 @@ def _agent_card():
                 "from Google Cloud Storage."
             ),
             version="0.1.0",
-            capabilities={},
+            capabilities={"streaming": True},
             skills=[],
             default_input_modes=["text/plain"],
-            default_output_modes=["text/plain"],
+            default_output_modes=["text/markdown", "text/plain"],
             supports_authenticated_extended_card=False,
         )
 

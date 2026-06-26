@@ -3,7 +3,11 @@ from __future__ import annotations
 import unittest
 
 from data_a2a_agent.config import BigQueryTable
-from data_a2a_agent.tools import _assert_blob_allowed, _validate_select_sql
+from data_a2a_agent.tools import (
+    _assert_blob_allowed,
+    _validate_select_sql,
+    rows_to_markdown_table,
+)
 
 
 ALLOWED = (
@@ -41,6 +45,34 @@ class ToolTests(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, "configured prefix"):
             _assert_blob_allowed("enterprise", "other/security.txt")
+
+    def test_rows_to_markdown_table_formats_and_escapes_values(self):
+        table = rows_to_markdown_table(
+            [
+                {
+                    "County Code": "MRG",
+                    "County Name": "Morgan",
+                    "Note": "high | fatal\nrate",
+                },
+                {
+                    "County Code": "PER",
+                    "County Name": "Perry",
+                    "Note": None,
+                },
+            ]
+        )
+
+        self.assertEqual(
+            table,
+            "\n".join(
+                [
+                    "| County Code | County Name | Note |",
+                    "| --- | --- | --- |",
+                    "| MRG | Morgan | high \\| fatal rate |",
+                    "| PER | Perry |  |",
+                ]
+            ),
+        )
 
 if __name__ == "__main__":
     unittest.main()
